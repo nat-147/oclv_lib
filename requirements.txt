@@ -1,0 +1,41 @@
+# oclv_lib requirements
+# Verified with Python 3.9. Versions pinned to what this pipeline was tested against.
+#
+# torch/torchvision below are CUDA 11.8 wheels (+cu118). Install them from PyTorch's own
+# index first, then install the rest of this file, e.g.:
+#   pip install torch==2.0.1+cu118 torchvision==0.15.2+cu118 --index-url https://download.pytorch.org/whl/cu118
+#   pip install -r requirements.txt
+# (adjust the cu118 tag to match your CUDA version, or drop the suffix for a CPU/other build)
+torch==2.0.1
+torchvision==0.15.2
+
+# training loop / config / experiment tracking
+accelerate==0.27.2
+pytorch-ignite==0.4.9
+hydra-core==1.1.1
+omegaconf==2.1.1
+wandb==0.19.11
+
+# core numerics / data
+numpy==1.26.4
+scipy==1.10.0
+scikit-learn==1.2.2
+scikit-image==0.19.2
+h5py==3.6.0
+deepdiff==5.8.1
+
+# metrics
+torchmetrics==1.8.2
+einops==0.8.2
+
+# dataset generation (ContinuousShiftingSpritesloops sprite rendering)
+spriteworld==1.0.2
+
+# viz / logging
+matplotlib==3.6.1
+plotly==5.15.0
+
+# misc
+Pillow==9.2.0
+PyYAML==6.0
+tqdm==4.64.1

@@ -21,18 +21,15 @@ trainer:
   clip_grad_norm: null  # null or float; grad clipping OFF (clip=10000 rescued trial-146 seed 3 but degraded healthy seeds 1/2/4: mean ARI 0.52 vs 0.70)
 
   logweights_steps: 1000
-  logimages_steps: 1000
+  logimages_steps: 5000
   logloss_steps: 1000
-  checkpoint_steps: 100
+  checkpoint_steps: 1000
   logvalid_steps: 5000
 
   # For cluster: resubmit automatically after this number of steps or hours
   resubmit_steps: null
   resubmit_hours: null
 
-dataset:
-  output_features: all   # 'all' or list of strings
-  skip_loading: false    # Skip loading actual data, use fake data instead.
 
 hydra:
   run:

@@ -54,7 +54,7 @@ model:
     loop_loss_weight: 2e-2
     shortcut_loss_weight: 5e-2
     isometry_loss_weight: 1e-1
-    isometry_similarity_threshold: 2e-1
+    isometry_similarity_threshold: 1e-2
 
   
   
