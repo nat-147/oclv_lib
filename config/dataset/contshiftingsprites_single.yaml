@@ -1,0 +1,26 @@
+# @package _global_
+
+dataset:
+  _target_: velocity_extraction.data.ContinuousShiftingSpritesloops
+  name: 'contshiftingsprites'
+  width: 64
+  height: 64
+  input_channels: 3
+  num_background_objects: 1
+  max_num_objects: 2 # include background
+  dataset_path: 'velocity_extraction/data/continuous_shifting_sprites_loops_sp1_len41_black_4k'
+  r_norm: 0.39
+  scale_min: 0.09
+  scale_max: 0.11
+  max_shift: 0.1
+  random_walk_length: 10
+  repeat_twice: true
+  bg_color: [0, 0, 0] # RGB
+  fg_count_distribution : {
+      1: 1.0,
+      }
+
+data_sizes:
+  - 4000 # train
+  - 1000 # valid/test
+  - 

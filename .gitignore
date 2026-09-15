@@ -1,0 +1,7 @@
+outputs/runs/
+velocity_extraction/data/
+__pycache__/
+
+*.log
+*.pyc
+README.md

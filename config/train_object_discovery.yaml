@@ -1,0 +1,41 @@
+defaults:
+  - _self_
+  - dataset: ???
+  - model: ???
+  #- optional special_cases: ${model}-${dataset}
+  - override hydra/job_logging: disabled
+
+seed: 12345
+device: cuda
+debug: false
+num_workers: 8
+persistent_workers: True
+prefetch_factor: 4
+
+curr_dir: ??? 
+
+# Load checkpoint and resume training if the run directory exists
+allow_resume: True
+
+trainer:
+  clip_grad_norm: null  # null or float; grad clipping OFF (clip=10000 rescued trial-146 seed 3 but degraded healthy seeds 1/2/4: mean ARI 0.52 vs 0.70)
+
+  logweights_steps: 1000
+  logimages_steps: 1000
+  logloss_steps: 1000
+  checkpoint_steps: 100
+  logvalid_steps: 5000
+
+  # For cluster: resubmit automatically after this number of steps or hours
+  resubmit_steps: null
+  resubmit_hours: null
+
+dataset:
+  output_features: all   # 'all' or list of strings
+  skip_loading: false    # Skip loading actual data, use fake data instead.
+
+hydra:
+  run:
+    # Default output directory
+    dir: ./outputs/runs/${oc.select:curr_dir, ${model.name}-${dataset.name}-${now:%Y-%m-%d_%H-%M-%S}}
+  output_subdir: null
