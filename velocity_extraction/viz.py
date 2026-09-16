@@ -67,7 +67,7 @@ def ocv(model, images, gt_vs=None):
     else:
         true_pred_imgs = [i1, i2, i3, pred_imgs]
 
-    pred_vs = pred_vs[:,:,].squeeze() # (T//2, K, 2)
+    pred_vs = pred_vs.squeeze(0) # (T//2, K, 2)
 
     return true_pred_imgs, pred_vs
 
@@ -102,7 +102,7 @@ def ocv_pairs(model, images, gt_vs=None):
         encoded = encoded.permute(0, 2, 1)
         encoded = encoded.unsqueeze(0)
 
-        if not model.temporal_slot_init:
+        if not model.temporal_prop:
             zs = model.slot_attention(encoded)
         else:
             init_slots = None
@@ -134,8 +134,6 @@ def ocv_pairs(model, images, gt_vs=None):
             zs = model.autoencoder.sample_zh(zs)[-1]
         zs = zs.unsqueeze(0)
 
-        zs = model.vel_extractor.recover_z(zs)
-
         model.hungarian_matcher.reset()
         for t in range(T):
             zs[:,t] = model.hungarian_matcher(zs[:,t])
@@ -149,7 +147,7 @@ def ocv_pairs(model, images, gt_vs=None):
 
     true_pred_imgs = [i1, i2, pred_imgs]
 
-    pred_vs = pred_vs[:,:,].squeeze() # (T-1, K, 2)
+    pred_vs = pred_vs.squeeze(0) # (T-1, K, 2)
 
     return true_pred_imgs, pred_vs
 
@@ -252,8 +250,8 @@ def save_figures_ocvelocity(wandb_run, model, train_dataset, test_dataset, pred_
 
     XY_SCALE = 0.3
 
-    axes_col = 1 + model.num_slots # 2 -> 5
-
+    axes_col = 1 + pred_vs.shape[-2]
+    
     fig7, axes7 = plt.subplots(4, axes_col, figsize=(5*axes_col, 22))
     axes7 = axes7.flatten()
 

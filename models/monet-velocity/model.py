@@ -58,7 +58,7 @@ class MonetVelocity(BaseModel):
 
         if self.use_vel_extractor:
             self.vel_loss_weights = dict(self.vel_loss_weights)
-            self.vel_extractor = VelocityExtractor(slot_dim=self.latent_size, v_dim=2, loss_weights=self.vel_loss_weights, use_input_pairs=self.use_input_pairs)
+            self.vel_extractor = VelocityExtractor(slot_dim=self.latent_size, num_slots=self.num_slots, v_dim=2, loss_weights=self.vel_loss_weights, use_input_pairs=self.use_input_pairs)
 
             if self.hungarian_matching:
                 self.hungarian_matcher = HungarianMatcher(self.num_slots-1)
@@ -83,6 +83,13 @@ class MonetVelocity(BaseModel):
 
         # Component VAE forward pass.
         zs, kl_zs, slot_means = self._encode(x, log_masks) 
+
+        if self.hungarian_matching:
+            zs_matched = zs.clone()
+            self.hungarian_matcher.reset()
+            for t in range(T):
+                zs_matched[:,t] = self.hungarian_matcher(zs[:,t])
+            zs = zs_matched
      
         slots_recon, masks_pred = self._decode(zs)
 
@@ -100,14 +107,6 @@ class MonetVelocity(BaseModel):
         if self.use_vel_extractor:
             slots = zs.unflatten(0, (B,T))
             slots = slots[:,:,1:,:]
-
-            if self.hungarian_matching:
-                slots_matched = slots.clone()
-                
-                self.hungarian_matcher.reset()
-                for t in range(T):
-                    slots_matched[:,t] = self.hungarian_matcher(slots[:,t])
-                slots = slots_matched
 
             vel_losses, pred_slots = self.vel_extractor(slots)
             vel_loss = sum(vel_losses.values()).squeeze()

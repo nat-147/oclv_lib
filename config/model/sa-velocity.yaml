@@ -6,7 +6,7 @@ defaults:
 batch_size: 4
 trainer:
   _target_: models.sa-velocity.trainer.SlotAttentionTrainer
-  steps: 20_000
+  steps: 100_000
   use_warmup_lr: true
   warmup_steps: 10_000
   use_exp_decay: true

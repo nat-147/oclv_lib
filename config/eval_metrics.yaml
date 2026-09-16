@@ -1,0 +1,18 @@
+checkpoint_path: ???
+device: cuda
+seed: 12345
+batch_size: 8
+
+loss_terms: [loss]
+
+overwrite: false
+
+debug: false
+
+hydra:
+  run:
+    dir: ./
+  output_subdir: null
+
+defaults:
+  - override hydra/job_logging: disabled
