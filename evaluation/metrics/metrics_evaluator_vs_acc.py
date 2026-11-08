@@ -32,8 +32,8 @@ def dict_tensor_gather_mean(accelator: Accelerator, data: Dict[str, List[Tensor]
 _DEFAULT_METRICS = [
     "image_ari",
     "video_ari",
-    #"image_mbo",
-    #"video_mbo",
+    "image_mbo",
+    "video_mbo",
     "mse",
 ]
 
