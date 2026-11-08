@@ -162,9 +162,9 @@ def main(config):
     if accelerator.is_main_process:
         logging.info("Creating data loaders")
 
-    if config.dataset.name == 'contshiftingsprites':
+    if config.dataset.name in ('contshiftingsprites', 'clevr'):
         dataconfig = dict(
-            dataset_class=ContinuousShiftingSpritesloops,
+            dataset_class=hydra.utils.get_class(config.dataset._target_),
             dataset_args=hydra_to_dataset_args(config),
             dataloader_args=dict(
                 batch_size=config.batch_size // accelerator.num_processes,

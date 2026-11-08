@@ -1,3 +1,4 @@
+import hydra
 import logging
 import os
 from pathlib import Path
@@ -54,9 +55,9 @@ def eval_shared(
     set_all_seeds(config.seed)
 
     # Build the held-out dataloader for the dataset the checkpoint was trained on.
-    if checkpoint_config.dataset.name == "contshiftingsprites":
+    if checkpoint_config.dataset.name in ("contshiftingsprites", "clevr"):
         dataconfig = dict(
-            dataset_class=ContinuousShiftingSpritesloops,
+            dataset_class=hydra.utils.get_class(checkpoint_config.dataset._target_),
             dataset_args=hydra_to_dataset_args(checkpoint_config),
             dataloader_args=dict(
                 batch_size=get_batch_size(config),

@@ -41,7 +41,11 @@ def ocv(model, images, gt_vs=None):
     else:
         z1, z2, z3 = zs[:,:-1:2,:,:], zs[:,1:-1:2,:,:], zs[:,2::2,:,:]
 
-    pred_vs = model.vel_extractor.encode(z1, z2) # (1, T//2, K, 2)
+    zm = zs.mean(dim=-2, keepdim=True)
+    zm1, zm2 = zm[:,0:-1:2,:,:], zm[:,1:-1:2,:,:]
+
+    pred_vs = model.vel_extractor.encode(zm1, zm2).expand(-1,-1, zs.shape[-2], -1)  # (1, T//2, K, 2)
+    
     pred_z3 = model.vel_extractor.decode(pred_vs, z2)
 
     recon_imgs = None
@@ -170,7 +174,7 @@ def save_figures_ocvelocity(wandb_run, model, train_dataset, test_dataset, pred_
     train_predicted_velocities = []
     train_colors = []
 
-    sample_num = 400
+    sample_num = 800
     for i in range(sample_num):
         with torch.no_grad():
             index = np.random.randint(0, len(train_dataset), size=(1,))[0]

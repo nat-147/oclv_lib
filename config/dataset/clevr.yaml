@@ -1,0 +1,48 @@
+# @package _global_
+
+# CLEVR 시나리오 A-loop (clevr/gen_loop_scenario.py 기본값). 데이터가 없으면 Blender로 생성
+dataset:
+  _target_: velocity_extraction.data.Clevr
+  name: 'clevr'
+  width: 128
+  height: 128
+  input_channels: 3
+  num_background_objects: 1
+  max_num_objects: 7 # include background (객체 최대 6개)
+  dataset_path: 'velocity_extraction/data/clevr_len41_128_2k'
+  # 경로 (화면 너비 = 1 단위, 바닥에서 x world_scale)
+  random_walk_length: 10   # 프레임 수 = 4*10+1 = 41
+  repeat_twice: true
+  r_norm: 0.41
+  max_shift: 0.1
+  world_scale: 5.0
+  max_tries_num: 800
+  # 배치 / 가려짐 (시나리오 A)
+  disk: 2.2
+  gap: 1.5
+  in_frame: 1.0
+  vis_min: 0.3
+  vis_need: 0.0
+  fg_count_distribution: {
+      2: 0.05,
+      3: 0.20,
+      4: 0.25,
+      5: 0.25,
+      6: 0.25,
+      }
+  # 렌더링
+  lens: 0.0          # 0 = 50mm x 320/240
+  spp: 64
+  amodal: 1
+  seed: 0            # train은 seed, test는 seed+1
+  # 생성기 (Blender 3.3.21만 이 서버에서 동작)
+  blender: '/workspace/clevr/tools/blender-3.3.21-linux-x64/blender'
+  gen_script: '/workspace/clevr/gen_loop_scenario.py'
+  num_gen_procs: 16  # 병렬 Blender 프로세스 수 (GPU마다 돌아가며 배정)
+  gpus: null         # null = 보이는 모든 GPU
+  keep_raw: false     # Blender 원본(png, meta.json)을 <dataset_path>/raw에 남김
+
+data_sizes:
+  - 2000 # train
+  - 500 # valid/test
+  - 
