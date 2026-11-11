@@ -36,7 +36,7 @@ model:
     activations: [relu, relu, relu, relu, relu, null]
   attention_iters: [3,1]
   slot_init_type: 'learned'
-  temporal_prop: true
+  temporal_prop: false
   mlp_size: 128
   eps: 1e-8
   h_broadcast: 8
@@ -50,10 +50,10 @@ model:
   lambda_warmup_steps_interval: [20_000, 30_000]
   vel_loss_weights:
     vel_loss_weight_lambda: 1
-    z_pred_loss_weight: 5e-2
-    loop_loss_weight: 2e-2
-    shortcut_loss_weight: 5e-2
-    isometry_loss_weight: 1e-1
+    z_pred_loss_weight: 1e-2
+    loop_loss_weight: 1e-2
+    shortcut_loss_weight: 1e-2
+    isometry_loss_weight: 1e-2
     isometry_similarity_threshold: 1e-2
 
   
