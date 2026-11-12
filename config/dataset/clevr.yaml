@@ -36,8 +36,8 @@ dataset:
   amodal: 1
   seed: 0            # train은 seed, test는 seed+1
   # 생성기 (Blender 3.3.21만 이 서버에서 동작)
-  blender: '/workspace/clevr/tools/blender-3.3.21-linux-x64/blender'
-  gen_script: '/workspace/clevr/gen_loop_scenario.py'
+  blender: 'velocity_extraction/clevr/tools/blender-3.3.21-linux-x64/blender'
+  gen_script: 'velocity_extraction/clevr/gen_loop_scenario.py'
   num_gen_procs: 16  # 병렬 Blender 프로세스 수 (GPU마다 돌아가며 배정)
   gpus: null         # null = 보이는 모든 GPU
   keep_raw: false     # Blender 원본(png, meta.json)을 <dataset_path>/raw에 남김
