@@ -50,9 +50,9 @@ model:
   lambda_warmup_steps_interval: [20_000, 30_000]
   vel_loss_weights:
     vel_loss_weight_lambda: 1
-    z_pred_loss_weight: 5e-3
-    loop_loss_weight: 5e-3
-    shortcut_loss_weight: 5e-3
+    z_pred_loss_weight: 2e-3
+    loop_loss_weight: 2e-3
+    shortcut_loss_weight: 2e-3
     isometry_loss_weight: 1e-2
     isometry_similarity_threshold: 1e-2
 
