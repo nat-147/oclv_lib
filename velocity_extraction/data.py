@@ -371,7 +371,7 @@ class Clevr(ContinuousShiftingSpritesloops):
         blender='/workspace/clevr/tools/blender-3.3.21-linux-x64/blender',
         gen_script='/workspace/clevr/gen_loop_scenario.py',
         num_gen_procs=8, gpus=None, device='CUDA', keep_raw=True,
-        num_training=1000, num_testing=200,
+        num_training=1000, num_testing=200, num_validation=0, split=None,
         data_to_ocl=False,
         input_channels=3, num_background_objects=1, max_num_objects=7,
         **unused,
@@ -398,6 +398,11 @@ class Clevr(ContinuousShiftingSpritesloops):
 
         self.num_training = int(num_training)
         self.num_testing = int(num_testing)
+        # num_validation > 0 이면 train/valid/test 3분할 (valid/ 폴더 추가). 0이면 예전 train/test 2분할
+        self.num_validation = int(num_validation or 0)
+        self.split = split or ('train' if train else 'test')
+        assert self.split in ('train', 'valid', 'test'), self.split
+        assert self.split != 'valid' or self.num_validation > 0, 'valid split은 num_validation > 0 일 때만 있음'
 
         self.data_to_ocl = data_to_ocl
         self.name = 'clevr'
@@ -406,9 +411,9 @@ class Clevr(ContinuousShiftingSpritesloops):
         self.num_background_objects = num_background_objects
         self.max_num_objects = max_num_objects
 
-        num = self.num_training if self.train else self.num_testing
+        split = self.split
+        num = {'train': self.num_training, 'valid': self.num_validation, 'test': self.num_testing}[split]
         self.seeds = torch.arange(num)
-        split = 'train' if self.train else 'test'
         done_flag = os.path.join(self.path, split, '.complete')
         last_file = os.path.join(self.path, split, f'images_{num - 1}.pt')
 
@@ -446,6 +451,8 @@ class Clevr(ContinuousShiftingSpritesloops):
         keys = ['patch_size', 'total_path_length', 'num_training', 'num_testing', 'random_walk_length', 'repeat_twice',
                 'r_norm', 'max_shift', 'world_scale', 'max_tries_num', 'disk', 'gap', 'in_frame', 'vis_min', 'vis_need',
                 'obj_count_distribution', 'lens', 'spp', 'seed']
+        if self.num_validation > 0:   # 2분할 데이터셋의 config.txt와 그대로 맞도록 3분할일 때만 추가
+            keys.insert(keys.index('num_testing'), 'num_validation')
         return ''.join(f'{k}: {getattr(self, k)}\n' for k in keys)
 
     def _gen_args(self):
@@ -496,27 +503,44 @@ class Clevr(ContinuousShiftingSpritesloops):
         return sorted(d for d in os.listdir(out)
                       if d.startswith('seq_') and os.path.isfile(os.path.join(out, d, 'meta.json')))
 
+    def create_dirs(self):
+        super().create_dirs()
+        if self.num_validation > 0:
+            os.makedirs(os.path.join(self.path, 'valid'), exist_ok=True)
+
+    # 3분할에서 test는 valid와 같은 seed(seed+1)를 쓰되 시퀀스 번호를 TEST_SI_START부터 써서 겹치지 않게 함
+    TEST_SI_START = 10000
+
+    def _split_seed_and_start(self, split):
+        if split == 'train':
+            return self.seed, 0
+        if split == 'test' and self.num_validation > 0:
+            return self.seed + 1, self.TEST_SI_START
+        return self.seed + 1, 0   # 2분할의 test, 3분할의 valid
+
     def generate_dataset(self, num_sets):
-        split = 'train' if self.train else 'test'
+        split = self.split
         out = os.path.join(self.path, 'raw', split)
+        seed, si_start = self._split_seed_and_start(split)
         try:
-            self._generate_and_convert(out, split, num_sets)
+            self._generate_and_convert(out, split, num_sets, seed, si_start)
         finally:
             # keep_raw=False면 성공/실패/중단(Ctrl+C) 모두 raw를 지움
             if not self.keep_raw:
                 shutil.rmtree(out, ignore_errors=True)
 
-    def _generate_and_convert(self, out, split, num_sets):
+    def _generate_and_convert(self, out, split, num_sets, seed, si_start=0, index_offset=0):
+        """Blender 시퀀스 번호 si_start부터 num_sets개를 만들어 {split}/images_{index_offset + i}.pt로 저장.
+        index_offset > 0이면 기존 데이터 뒤에 이어 붙임 (scripts/extend_clevr_dataset.py)"""
         import json
-        seed = self.seed if self.train else self.seed + 1
 
         # 배치 조건을 못 찾아 건너뛴(@@SKIP) 시퀀스가 있으면 뒤 번호로 채움
-        nxt = 0
+        nxt = si_start
         for _ in range(10):
             have = len(self._done_seqs(out))
             if have >= num_sets:
                 break
-            nxt = max(nxt, have)
+            nxt = max(nxt, si_start + have)
             missing = num_sets - have
             self._run_blender(out, seed, nxt, missing)
             nxt += missing
@@ -538,13 +562,13 @@ class Clevr(ContinuousShiftingSpritesloops):
             images = torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2).contiguous()          # uint8 (T, 4, H, W)
             vs = torch.tensor(meta['trajectory']['velocity_xy'], dtype=torch.float32) / self.world_scale  # (T-1, 2)
             assert images.shape[0] == T and vs.shape == (T - 1, 2), (d, images.shape, vs.shape)
-            torch.save(images, os.path.join(self.path, split, f'images_{index}.pt'))
-            torch.save(vs, os.path.join(self.path, split, f'vs_{index}.pt'))
+            torch.save(images, os.path.join(self.path, split, f'images_{index_offset + index}.pt'))
+            torch.save(vs, os.path.join(self.path, split, f'vs_{index_offset + index}.pt'))
             if not self.keep_raw:
                 shutil.rmtree(d, ignore_errors=True)   # 변환 끝난 시퀀스는 바로 삭제
 
     def __getitem__(self, index):
-        split = 'train' if self.train else 'test'
+        split = self.split
         images = torch.load(os.path.join(self.path, split, f'images_{index}.pt'))
         gt_vs = torch.load(os.path.join(self.path, split, f'vs_{index}.pt'))
         images = images.float()

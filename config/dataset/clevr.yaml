@@ -9,7 +9,7 @@ dataset:
   input_channels: 3
   num_background_objects: 1
   max_num_objects: 7 # include background (객체 최대 6개)
-  dataset_path: 'velocity_extraction/data/clevr_len41_128_2k'
+  dataset_path: 'velocity_extraction/data/clevr_len41_128_4k'
   # 경로 (화면 너비 = 1 단위, 바닥에서 x world_scale)
   random_walk_length: 10   # 프레임 수 = 4*10+1 = 41
   repeat_twice: true
@@ -43,6 +43,6 @@ dataset:
   keep_raw: false     # Blender 원본(png, meta.json)을 <dataset_path>/raw에 남김
 
 data_sizes:
-  - 2000 # train
-  - 500 # valid/test
-  - 
+  - 4000 # train
+  - 500 # valid (학습 중 검증 / best model 선택)
+  - 500 # test (최종 평가만)

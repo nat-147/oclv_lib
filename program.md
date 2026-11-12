@@ -48,7 +48,8 @@ trial\tval_loss\tother_metric\tkept\tcommit_hash
 3. 위 값들을 한 줄로 합쳐 results.tsv에 append
 4. BASE=outputs/runs/sav-mean_z-occ-temp-clevr6-hparamtune-base_lr2/train_state.yaml
 5. 성능이 $BASE보다 개선됐으면 kept=yes로 기록하고 커밋 유지, 아니면 kept=no로 기록하고 yaml만 되돌림:
-   git reset --soft HEAD~1 && git restore --staged --worktree config/model/sa-velocity_clevr.yaml
+   git reset -q --soft HEAD~1 && git reset -q HEAD -- config/model/sa-velocity_clevr.yaml && git checkout -- config/model/sa-velocity_clevr.yaml
+   (이 서버 git은 구버전이라 git restore 없음)
    (git reset --hard 금지: 커밋 안 된 다른 파일 수정이 사라짐)
    - 개선 판단 기준: best model의 VideoARI (동률이면 ImageARI, 그다음 MSE)
    - val_loss로 비교 금지: trial의 val_loss는 vel loss가 가중치 100%로 포함되지만 BASE(vel extractor 끔)는 MSE만 포함되어 서로 비교 불가

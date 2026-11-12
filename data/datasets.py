@@ -707,6 +707,9 @@ def hydra_to_dataset_args(cfg):
             num_testing=num_testing,
             data_to_ocl=True,
         )
+        # data_sizes [train, valid, test]의 세 번째 값이 있으면 3분할 (예전 [train, test, null]은 2분할 그대로)
+        if len(data_sizes) > 2 and data_sizes[2]:
+            dataset_args.update(num_validation=int(data_sizes[1]), num_testing=int(data_sizes[2]))
         return dataset_args
 
     dataset_args = dict(

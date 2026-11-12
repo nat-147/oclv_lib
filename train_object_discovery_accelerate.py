@@ -174,6 +174,9 @@ def main(config):
                 prefetch_factor=config.prefetch_factor,
             )
         )
+        # 3분할 데이터셋이면 학습 중 검증(best model 선택)은 valid로 하고 test는 최종 평가에만 씀
+        if dataconfig['dataset_args'].get('num_validation', 0) > 0:
+            dataconfig['eval_split'] = 'valid'
         _, _, train_loader, test_loader = get_dataset_dataloader(dataconfig)
         dataloaders = [train_loader, test_loader]
     else:
