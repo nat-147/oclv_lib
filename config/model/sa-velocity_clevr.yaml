@@ -44,7 +44,7 @@ model:
   
   use_vel_extractor: true
   use_input_pairs: false
-  hungarian_matching: false
+  hungarian_matching: true
   use_lambda_warmup: true
 
   lambda_warmup_steps_interval: [30_000, 40_000]
