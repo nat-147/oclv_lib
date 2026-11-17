@@ -51,7 +51,7 @@ model:
   vel_loss_weights:
     vel_loss_weight_lambda: 1
     z_pred_loss_weight: 1e-2
-    loop_loss_weight: 1e-2
+    loop_loss_weight: 2e-3
     shortcut_loss_weight: 1e-2
     isometry_loss_weight: 1e-1
     isometry_similarity_threshold: 1e-2
