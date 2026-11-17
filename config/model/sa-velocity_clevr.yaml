@@ -47,7 +47,7 @@ model:
   hungarian_matching: true
   use_lambda_warmup: true
 
-  lambda_warmup_steps_interval: [30_000, 40_000]
+  lambda_warmup_steps_interval: [20_000, 30_000]
   vel_loss_weights:
     vel_loss_weight_lambda: 1
     z_pred_loss_weight: 1e-2
