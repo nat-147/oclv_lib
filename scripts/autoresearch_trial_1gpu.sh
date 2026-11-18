@@ -14,13 +14,27 @@ if [ -e "$D" ]; then echo "$D already exists" >&2; exit 1; fi
 out=$(python scripts/make_trial_config.py "$D" "$@") || { echo "failed to prepare $D" >&2; exit 1; }
 echo "$out" | sed 's/^/trial '"$N"': /'
 
-python - "$D" <<'EOF' || { echo "failed to add matcher perms" >&2; exit 1; }
-import itertools, sys
+python - "$D" "$@" <<'EOF' || { echo "failed to prepare trial config/weights" >&2; exit 1; }
+import itertools, os, sys
 from pathlib import Path
 import torch
+from hydra.experimental import compose, initialize_config_dir
 from omegaconf import OmegaConf
 d = Path(sys.argv[1])
 cfg = OmegaConf.load(d / "train_config.yaml")
+# The dataset section comes from the shared checkpoint's config. Generation-only keys in config/dataset/clevr.yaml
+# may have changed since (e.g. 2026-11-18: r_norm 0.41+disk 2.2 -> r_norm 0.44, same on-disk data), which would make
+# the trainer refuse to resume. Use the current dataset config (+ CLI dataset overrides) instead.
+with initialize_config_dir(config_dir=os.path.abspath("config")):
+    cur = compose("train_object_discovery", overrides=["model=sa-velocity_clevr", "dataset=clevr"]
+                  + [a for a in sys.argv[2:] if a.startswith("dataset.")])
+old = OmegaConf.to_container(cfg.dataset)
+new = OmegaConf.to_container(cur.dataset)
+changed = {k: (old.get(k), new.get(k)) for k in set(old) | set(new) if old.get(k) != new.get(k)}
+if changed:
+    cfg.dataset = cur.dataset
+    OmegaConf.save(cfg, d / "train_config.yaml")
+    print(f"dataset config synced to current clevr.yaml: {changed}")
 if cfg.model.get("hungarian_matching") and cfg.model.use_vel_extractor:
     k = OmegaConf.to_container(cfg, resolve=True)["model"]["num_slots"]
     perms = torch.tensor(list(itertools.permutations(range(k))), dtype=torch.long)
