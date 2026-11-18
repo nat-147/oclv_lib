@@ -26,12 +26,12 @@ ImageARI, VideoARI (높을수록 좋음), MSE (낮을수록 좋음)
 
 ## 공유 체크포인트 (0~10k step)
 - lambda warmup 시작 전에는 vel loss 가중치가 0이므로, warmup 시작 >= 1e4인 trial은 0~10k 학습이 모두 동일함
-- 한 번만 생성: CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes=4 --multi_gpu train_object_discovery_accelerate.py model=sa-velocity_clevr dataset=clevr curr_dir=sav-mean_z-occ-temp-clevr6-hparamtune-shared_10k trainer.steps=10000
+- 한 번만 생성: CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes=4 --multi_gpu train_object_discovery_accelerate.py model=sa-velocity_clevr dataset=clevr curr_dir=sav-mean_z-occ-clevr6-hparamtune-shared_10k trainer.steps=10000
 - trial은 scripts/autoresearch_trial.sh가 이 체크포인트를 복사하고 train_config.yaml을 trial hparam + 새 uuid(wandb run 분리)로 바꿔서 10k부터 이어서 학습
 - warmup 시작 < 1e4인 trial은 공유 없이 처음부터 학습 (스크립트가 자동 판단)
 
 ## 검증 명령
-1. RUN_DIR="sav-mean_z-occ-temp-clevr6-hparamtune-trial_()",  괄호 ()는 해당 trial number로 교체
+1. RUN_DIR="sav-mean_z-occ-clevr6-hparamtune-trial_()",  괄호 ()는 해당 trial number로 교체
 2. scripts/autoresearch_trial.sh <trial number> <변경한 hparam CLI override...>
    - 내부적으로 CUDA_VISIBLE_DEVICES=0,1,2,3 accelerate launch --num_processes=4 --multi_gpu train_object_discovery_accelerate.py model=sa-velocity_clevr dataset=clevr curr_dir=$RUN_DIR <override> 실행, 로그는 outputs/runs/$RUN_DIR/run.log
    - 4 GPU DDP로 한 번에 1 trial씩 순차 실행 (공유 체크포인트 사용 시 trial당 약 2.7시간). 전체 배치 4는 GPU당 1로 자동 분할됨
@@ -46,7 +46,7 @@ trial\tval_loss\tother_metric\tkept\tcommit_hash
 1. outputs/runs/$RUN_DIR/train_state.yaml에서 best model의 val_loss와 other_metric 추출
 2. outputs/runs/$RUN_DIR/train_config.yaml에서 lr 추출
 3. 위 값들을 한 줄로 합쳐 results.tsv에 append
-4. BASE=outputs/runs/sav-mean_z-occ-temp-clevr6-hparamtune-base_lr2/train_state.yaml
+4. BASE=outputs/runs/sav-mean_z-occ-clevr6-hparamtune-base_lr2/train_state.yaml
 5. 성능이 $BASE보다 개선됐으면 kept=yes로 기록하고 커밋 유지, 아니면 kept=no로 기록하고 yaml만 되돌림:
    git reset -q --soft HEAD~1 && git reset -q HEAD -- config/model/sa-velocity_clevr.yaml && git checkout -- config/model/sa-velocity_clevr.yaml
    (이 서버 git은 구버전이라 git restore 없음)

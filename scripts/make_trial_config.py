@@ -15,7 +15,7 @@ from pathlib import Path
 from omegaconf import OmegaConf, open_dict
 
 RUNS = Path("outputs/runs")
-PREFIX = "sav-mean_z-occ-temp-clevr6-hparamtune-"
+PREFIX = "sav-mean_z-occ-clevr6-hparamtune-"
 MODEL_YAML = Path("config/model/sa-velocity_clevr.yaml")
 FILES = ["train_checkpoint.pt", "model.pt", "best_model.pt", "train_state.yaml"]
 
@@ -43,7 +43,8 @@ if shared_step:
     with open_dict(cfg):
         cfg.curr_dir = trial.name
         cfg.uuid = str(uuid.uuid4())  # separate wandb run per trial
-        cfg.trainer.steps = 50_000
+        if OmegaConf.select(overrides, "trainer.steps") is None:
+            cfg.trainer.steps = 50_000  # shared checkpoints were saved with their own (shorter) budget
     for f in FILES:
         shutil.copy2(shared / f, trial / f)
     OmegaConf.save(cfg, trial / "train_config.yaml")
