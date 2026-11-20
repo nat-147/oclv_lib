@@ -29,6 +29,8 @@ ap.add_argument("run_dir", type=Path)
 ap.add_argument("--steps", type=int, default=100)
 ap.add_argument("--ckpt", default="best_model.pt")
 ap.add_argument("--out", default="train_state_hm.yaml")
+ap.add_argument("--model-step", type=int, default=None,
+                help="training step for the vel-loss lambda warmup in valid_loss (default: full weight, like the trainer without eval_lambda_warmup)")
 ap.add_argument("--no-hm", action="store_true", help="sanity check: keep the run's own hungarian_matching")
 args = ap.parse_args()
 
@@ -60,7 +62,7 @@ if model.use_vel_extractor:
     loss_terms += ["loop_loss", "z_pred_loss", "shortcut_loss", "isometry_loss"]
 ev = MetricsEvaluator(dataloader=valid_loader, device=acc.device, loss_terms=loss_terms, skip_background=True,
                       _forward_pass=ForwardPass(model, acc.device), accelerator=acc)
-losses, metrics = ev.eval(model, steps=args.steps)
+losses, metrics = ev.eval(model, steps=args.steps, model_step=args.model_step)
 
 state = yaml.safe_load(open(args.run_dir / "train_state.yaml"))
 src = state["best_model"] if args.ckpt == "best_model.pt" else {"step": state["step"]}
@@ -71,7 +73,7 @@ out = {
         "mse": float(metrics["mse"]), "valid_loss": float(losses["loss"]), "step": src["step"],
     },
     "eval": {"hungarian_matching": bool(cfg.model.hungarian_matching), "ckpt": args.ckpt, "steps": args.steps, "batch_size": cfg.batch_size,
-             "num_processes": acc.num_processes, "split": dataconfig.get("eval_split", "test")},
+             "num_processes": acc.num_processes, "model_step": args.model_step, "split": dataconfig.get("eval_split", "test")},
 }
 with open(args.run_dir / args.out, "w") as f:
     yaml.safe_dump(out, f)
