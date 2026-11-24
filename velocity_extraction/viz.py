@@ -28,7 +28,7 @@ def ocv(model, images, gt_vs=None):
         if model.autoencoder.vae:
             enc_out = zh
             zs = enc_out[:,:,0:model.args.slot_dim]
-        zs = zs.usqueeze(0)
+        zs = zs.unsqueeze(0)
 
     if model.hungarian_matching:
             model.hungarian_matcher.reset()
@@ -72,6 +72,7 @@ def ocv(model, images, gt_vs=None):
 
     else:
         pred_imgs = model.autoencoder.decoder(pred_z3.squeeze(0)).unsqueeze(0)
+        recon_imgs = model.autoencoder.decoder(z3.squeeze(0)).unsqueeze(0)
 
     if recon_imgs is not None:
         true_pred_imgs = [i1, i2, i3, recon_imgs, pred_imgs]

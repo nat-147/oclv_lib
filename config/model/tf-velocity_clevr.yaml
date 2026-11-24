@@ -1,0 +1,61 @@
+# @package _global_
+
+defaults:
+  - _base
+
+batch_size: 4
+trainer:
+  _target_: models.tf_velocity.trainer.TransformerTrainer
+  steps : 30_000
+  eval_steps: 10   # validation batches per evaluation (per process); jacobian masks are slow
+  optimizer_config:
+    alg: Adam
+    lr: 5e-4
+
+  # LR scheduler (warmup + exp decay). data/alpha/beta default to model.autoencoder_args
+  lr_scheduler_args:
+    lr: 5e-4
+    warmup_lr_steps: 30_000
+    decay_rate: 0.1
+    decay_steps: 500_000
+    num_iters: 500_000
+
+model:
+  _target_: models.tf_velocity.model.TFVelocityAE
+  name: tf-velocity
+  num_slots: ${dataset.max_num_objects}
+
+  temporal_slot_init: false
+
+  # step interval for computing mask/jacobian images; follows trainer.logimages_steps by default
+  logimages_steps: ${trainer.logimages_steps}
+
+  # autoencoder hyperparameters (passed to get_model); num_slots follows model.num_slots
+  autoencoder_args:
+    data: sprites
+    slot_dim: 64
+    encoder: transformer
+    decoder: transformer
+    alpha: 0.05
+    beta: 0.05
+    query_dim: 180
+    proj_dim: 516
+    num_dec_layers: 2
+    warmup_alpha_steps: 30_000
+    sigma: null   # null -> 5.0 if alpha>0 or beta>0, else 1.0
+
+  use_vel_extractor: true
+  use_input_pairs: false
+  use_lambda_warmup: true
+  hungarian_matching: true
+
+  lambda_warmup_steps_interval: [10_000, 20_000]
+  vel_loss_weights:
+    vel_loss_weight_lambda: 0
+    z_pred_loss_weight: 1e-2
+    loop_loss_weight: 1e-2
+    shortcut_loss_weight: 1e-2
+    isometry_loss_weight: 1e-2
+    isometry_similarity_threshold: 1e-2
+  
+  
