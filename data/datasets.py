@@ -732,5 +732,8 @@ def hydra_to_dataset_args(cfg):
         obj_count_distribution = dataset_cfg["fg_count_distribution"],
         data_to_ocl=True
     )
+    # data_sizes [train, valid, test] with a third value -> 3-way split (valid used during training), like clevr
+    if len(data_sizes) > 2 and data_sizes[2]:
+        dataset_args.update(num_validation=int(data_sizes[1]), num_testing=int(data_sizes[2]))
 
     return dataset_args

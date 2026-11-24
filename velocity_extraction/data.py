@@ -51,6 +51,7 @@ class ContinuousShiftingSpritesloops(Dataset):
         num_training=20e3, num_testing=5e3,
         data_to_ocl = False,
         input_channels=3, num_background_objects=1, max_num_objects=7,
+        num_validation=0, split=None,
 
     ):
         super().__init__()
@@ -101,6 +102,11 @@ class ContinuousShiftingSpritesloops(Dataset):
 
         self.num_training = int(num_training)
         self.num_testing = int(num_testing)
+        # 3-way split (train / valid / test) when num_validation > 0, like Clevr; valid is used during training
+        self.num_validation = int(num_validation)
+        self.split = split or ('train' if train else 'test')
+        assert self.split in ('train', 'valid', 'test'), self.split
+        assert self.split != 'valid' or self.num_validation > 0, 'valid split needs num_validation > 0'
 
         self.data_to_ocl = data_to_ocl
         self.name = 'contshiftingsprites'
@@ -125,16 +131,15 @@ class ContinuousShiftingSpritesloops(Dataset):
 
         self._dist_barrier(world_size)
 
-        if self.train:
-            self.seeds = torch.arange(0, int(num_training))
-        else:
-            self.seeds = torch.arange(int(num_training), int(num_training) + int(num_testing))
+        n_tr, n_va, n_te = self.num_training, self.num_validation, self.num_testing
+        start, num = {'train': (0, n_tr), 'valid': (n_tr, n_va), 'test': (n_tr + n_va, n_te)}[self.split]
+        self.seeds = torch.arange(start, start + num)
 
 
         # check if item is already saved
-        if rank == 0 and not os.path.exists(os.path.join(self.path, 'train' if self.train else 'test', 'images_0.pt')):
-            print(f"Generating new {'train' if self.train else 'test'}ing data sequences of frames..")
-            self.generate_dataset(int(num_training) if self.train else int(num_testing))
+        if rank == 0 and not os.path.exists(os.path.join(self.path, self.split, 'images_0.pt')):
+            print(f"Generating new {self.split} data sequences of frames..")
+            self.generate_dataset(num)
             print("Sequences of frames completely saved")
 
         self._dist_barrier(world_size)
@@ -154,6 +159,8 @@ class ContinuousShiftingSpritesloops(Dataset):
         os.makedirs(self.path, exist_ok=True)
         os.makedirs(os.path.join(self.path, 'train'), exist_ok=True)
         os.makedirs(os.path.join(self.path, 'test'), exist_ok=True)
+        if self.num_validation > 0:
+            os.makedirs(os.path.join(self.path, 'valid'), exist_ok=True)
 
 
     def create_config(self):
@@ -166,6 +173,8 @@ class ContinuousShiftingSpritesloops(Dataset):
         config_str += '{}: {}\n'.format('patch size', self.patch_size)
         config_str += '{}: {}\n'.format('total_path_length', self.total_path_length)
         config_str += '{}: {}\n'.format('num training', self.num_training)
+        if self.num_validation > 0:   # 2-way datasets keep their original config.txt
+            config_str += '{}: {}\n'.format('num validation', self.num_validation)
         config_str += '{}: {}\n'.format('num testing', self.num_testing)
 
         return config_str
@@ -299,7 +308,7 @@ class ContinuousShiftingSpritesloops(Dataset):
             image_seq = torch.stack(frames)  # (T, 3+1, 64, 64)
             v_seq = torch.from_numpy(vs).float()  # (T, 2)
 
-            split_str = 'train' if self.train else 'test'
+            split_str = self.split
 
             images_path = os.path.join(self.path, split_str, 'images_{}.pt'.format(str(index)))
             vs_path = os.path.join(self.path, split_str, 'vs_{}.pt'.format(str(index)))
@@ -311,7 +320,7 @@ class ContinuousShiftingSpritesloops(Dataset):
     def __getitem__(self, index):
         assert 0 <= index <= len(self.seeds)
 
-        split_str = 'train' if self.train else 'test'
+        split_str = self.split
 
         images_path = os.path.join(self.path, split_str, 'images_{}.pt'.format(str(index)))
         vs_path = os.path.join(self.path, split_str, 'vs_{}.pt'.format(str(index)))
