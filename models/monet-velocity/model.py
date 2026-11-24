@@ -85,12 +85,27 @@ class MonetVelocity(BaseModel):
         zs, kl_zs, slot_means = self._encode(x, log_masks) 
 
         if self.hungarian_matching:
-            zs_matched = zs.clone()
+            # Match foreground slots (1..K-1) frame to frame and apply the same permutation to every per-slot
+            # quantity (z, masks, means) so slot k keeps its own mask. The loss is permutation invariant, so
+            # matching only changes which slot index an object gets over time (and the velocity input / VideoARI).
+            K = zs.shape[1]
+            zs_bt = zs.unflatten(0, (B, T))  # (B, T, K, D)
+            perm = torch.arange(K, device=zs.device).repeat(B, T, 1)  # (B, T, K)
             self.hungarian_matcher.reset()
             for t in range(T):
-                zs_matched[:,t] = self.hungarian_matcher(zs[:,t])
-            zs = zs_matched
-     
+                _, p = self.hungarian_matcher.step(zs_bt[:, t, 1:])
+                perm[:, t, 1:] = p + 1
+
+            def permute_slots(v: Tensor) -> Tensor:  # v: (B*T, K, ...)
+                vb = v.unflatten(0, (B, T))
+                idx = perm.view(B, T, K, *([1] * (vb.dim() - 3))).expand_as(vb)
+                return torch.gather(vb, 2, idx).flatten(0, 1)
+
+            zs = permute_slots(zs)
+            slot_means = permute_slots(slot_means)
+            log_masks = permute_slots(log_masks)
+            masks = log_masks.exp()
+
         slots_recon, masks_pred = self._decode(zs)
 
 

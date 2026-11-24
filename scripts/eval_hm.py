@@ -57,7 +57,8 @@ _, _, _, valid_loader = get_dataset_dataloader(dataconfig)
 model, valid_loader = acc.prepare(model, valid_loader)
 model.eval()
 
-loss_terms = ["loss", "x_recon_loss"]
+loss_terms = (["neg_log_p_x", "kl_mask", "kl_latent", "loss"] if model.name == "monet-velocity"
+              else ["loss", "x_recon_loss"])   # same as the model's trainer.loss_terms
 if model.use_vel_extractor:
     loss_terms += ["loop_loss", "z_pred_loss", "shortcut_loss", "isometry_loss"]
 ev = MetricsEvaluator(dataloader=valid_loader, device=acc.device, loss_terms=loss_terms, skip_background=True,

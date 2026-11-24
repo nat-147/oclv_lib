@@ -5,6 +5,7 @@
 # Env:
 #   MODEL            hydra model config (default monet-velocity_clevr)
 #   CAMPAIGN_PREFIX  run-dir prefix      (default mon-mean_z-clevr6-hparamtune-)
+#   RESUME           if set, continue an existing run dir in place instead of preparing a new one
 #   SNAPSHOT_EVERY   if set (e.g. 10000), copy this run's checkpoint to <PREFIX>shared_<N>k every SNAPSHOT_EVERY
 #                    steps (only meaningful for a base run whose vel-loss weight stays 0, so the state is
 #                    trial-independent), skipping snapshots that already exist
@@ -18,11 +19,17 @@ export MODEL_YAML=config/model/$MODEL.yaml
 RUN=${CAMPAIGN_PREFIX}trial_$N
 D=outputs/runs/$RUN
 
-if [ -e "$D" ]; then echo "$D already exists" >&2; exit 1; fi
-
-out=$(python scripts/make_trial_config.py "$D" "$@") || { echo "failed to prepare $D" >&2; exit 1; }
-echo "$out" | sed 's/^/trial '"$N"': /'
-SHARED=$(echo "$out" | sed -n 's/^SHARED=//p')
+if [ -n "${RESUME:-}" ]; then   # continue an interrupted run in place (same overrides; trainer resumes from its checkpoint)
+  [ -f "$D/train_config.yaml" ] || { echo "RESUME: $D has no train_config.yaml" >&2; exit 1; }
+  echo "trial $N: resuming in place from step $(sed -n 's/^step: //p' "$D/train_state.yaml" 2>/dev/null)"
+  echo "=== resumed $(date) ===" >> "$D/run.log"
+  SHARED=0
+else
+  if [ -e "$D" ]; then echo "$D already exists" >&2; exit 1; fi
+  out=$(python scripts/make_trial_config.py "$D" "$@") || { echo "failed to prepare $D" >&2; exit 1; }
+  echo "$out" | sed 's/^/trial '"$N"': /'
+  SHARED=$(echo "$out" | sed -n 's/^SHARED=//p')
+fi
 
 if [ "$SHARED" != "0" ]; then
 python - "$D" "$MODEL" "$@" <<'EOF' || { echo "failed to prepare trial config/weights" >&2; exit 1; }
@@ -74,7 +81,7 @@ snapshot_loop() {  # copy the run's checkpoint to <PREFIX>shared_<S/1000>k each 
 }
 
 CUDA_VISIBLE_DEVICES=$GPU accelerate launch --num_processes=1 --main_process_port $((29600 + GPU)) \
-  train_object_discovery_accelerate.py model=$MODEL dataset=clevr curr_dir=$RUN "$@" > "$D/run.log" 2>&1 &
+  train_object_discovery_accelerate.py model=$MODEL dataset=clevr curr_dir=$RUN "$@" >> "$D/run.log" 2>&1 &
 TRAIN_PID=$!
 if [ -n "${SNAPSHOT_EVERY:-}" ]; then snapshot_loop "$SNAPSHOT_EVERY" & fi
 wait $TRAIN_PID

@@ -197,6 +197,28 @@ class HungarianMatcher(nn.Module):
 
         return matched
 
+    def step(self, slots):
+        """Like forward, but also returns the permutation (B, N) with matched = slots[b, perm[b]]."""
+        B, N, _ = slots.shape
+        if self.prev_slots is None:
+            self.prev_slots = slots.detach()
+            return slots, torch.arange(N, device=slots.device).expand(B, N)
+        perm = self.best_perm(self.prev_slots, slots)
+        matched = torch.gather(slots, 1, perm.unsqueeze(-1).expand_as(slots))
+        self.prev_slots = matched.detach()
+        return matched, perm
+
+    def best_perm(self, prev_slots, curr_slots):
+        """Permutation (B, N) of curr_slots that minimises the summed cosine distance to prev_slots."""
+        N = curr_slots.shape[1]
+        prev = F.normalize(prev_slots, dim=-1)
+        curr = F.normalize(curr_slots, dim=-1)
+        cost = 1 - torch.bmm(prev, curr.transpose(1, 2))          # (B, N, N)
+        perms = self.perms.to(cost.device)
+        rows = torch.arange(N, device=cost.device)
+        perm_cost = cost[:, rows[None, :], perms].sum(-1)          # (B, N!)
+        return perms[perm_cost.argmin(-1)]                         # (B, N)
+
     def match(self, prev_slots, curr_slots):
 
         B, N, D = curr_slots.shape
