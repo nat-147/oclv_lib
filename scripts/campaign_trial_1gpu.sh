@@ -4,7 +4,7 @@
 #
 # Env:
 #   MODEL            hydra model config (default monet-velocity_clevr)
-#   CAMPAIGN_PREFIX  run-dir prefix      (default mon-mean_z-occ-clevr6-hparamtune-)
+#   CAMPAIGN_PREFIX  run-dir prefix      (default mon-mean_z-clevr6-hparamtune-)
 #   SNAPSHOT_EVERY   if set (e.g. 10000), copy this run's checkpoint to <PREFIX>shared_<N>k every SNAPSHOT_EVERY
 #                    steps (only meaningful for a base run whose vel-loss weight stays 0, so the state is
 #                    trial-independent), skipping snapshots that already exist
@@ -13,7 +13,7 @@ set -u
 cd /workspace/oclv_lib
 N=$1; GPU=$2; shift 2
 MODEL=${MODEL:-monet-velocity_clevr}
-export CAMPAIGN_PREFIX=${CAMPAIGN_PREFIX:-mon-mean_z-occ-clevr6-hparamtune-}
+export CAMPAIGN_PREFIX=${CAMPAIGN_PREFIX:-mon-mean_z-clevr6-hparamtune-}
 export MODEL_YAML=config/model/$MODEL.yaml
 RUN=${CAMPAIGN_PREFIX}trial_$N
 D=outputs/runs/$RUN

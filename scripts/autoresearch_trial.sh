@@ -6,7 +6,7 @@
 set -u
 cd /workspace/oclv_lib
 N=$1; shift
-PREFIX=sav-mean_z-occ-clevr6-hparamtune-
+PREFIX=sav-mean_z-clevr6-hparamtune-
 RUN=${PREFIX}trial_$N
 D=outputs/runs/$RUN
 

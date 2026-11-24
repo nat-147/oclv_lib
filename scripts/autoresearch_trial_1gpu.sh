@@ -6,7 +6,7 @@
 set -u
 cd /workspace/oclv_lib
 N=$1; GPU=$2; shift 2
-RUN=sav-mean_z-occ-clevr6-hparamtune-trial_$N
+RUN=sav-mean_z-clevr6-hparamtune-trial_$N
 D=outputs/runs/$RUN
 
 if [ -e "$D" ]; then echo "$D already exists" >&2; exit 1; fi

@@ -5,7 +5,7 @@ trial whose lambda warmup starts at or after S, because the velocity loss weight
 
 Usage: [CAMPAIGN_PREFIX=... MODEL_YAML=...] python scripts/make_trial_config.py <trial_dir> <override...>
 (defaults: the sa-velocity CLEVR6 campaign; the MONet campaign sets
- CAMPAIGN_PREFIX=mon-mean_z-occ-clevr6-hparamtune- MODEL_YAML=config/model/monet-velocity_clevr.yaml)
+ CAMPAIGN_PREFIX=mon-mean_z-clevr6-hparamtune- MODEL_YAML=config/model/monet-velocity_clevr.yaml)
 Shared checkpoints are found by globbing <PREFIX>shared_<N>k; a trial with use_lambda_warmup=false starts the
 vel loss at step 0 and therefore always trains from scratch.
 Prints "START=<warmup start>" and "SHARED=<step or 0>".
@@ -21,7 +21,7 @@ from pathlib import Path
 from omegaconf import OmegaConf, open_dict
 
 RUNS = Path("outputs/runs")
-PREFIX = os.environ.get("CAMPAIGN_PREFIX", "sav-mean_z-occ-clevr6-hparamtune-")
+PREFIX = os.environ.get("CAMPAIGN_PREFIX", "sav-mean_z-clevr6-hparamtune-")
 MODEL_YAML = Path(os.environ.get("MODEL_YAML", "config/model/sa-velocity_clevr.yaml"))
 FILES = ["train_checkpoint.pt", "model.pt", "best_model.pt", "train_state.yaml"]
 
