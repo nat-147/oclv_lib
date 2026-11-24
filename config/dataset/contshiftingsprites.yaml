@@ -25,5 +25,5 @@ dataset:
 
 data_sizes:
   - 4000 # train
-  - 1000 # valid/test
-  - 
+  - 500 # valid (validation during training / best-model selection)
+  - 500 # test (final evaluation only)
