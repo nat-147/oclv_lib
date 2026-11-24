@@ -1,0 +1,38 @@
+trial	val_loss	other_metric	kept	commit_hash
+0	0.1877179741859436	image_ari=0.7572;video_ari=0.5599;mse=0.00090;lr=2e-4;warmup=[5e4,6e4](vel off, CONTROL baseline);peak_video_ari=0.5697@45k;BASE(base_lr2) video_ari=0.6087	control	-
+1	0.00168469303753227	image_ari=0.6834;video_ari=0.5138;mse=0.00165;lr=2e-4;warmup=[1e4,2e4];z=s=1e-2,loop=1e-2,iso=1e-2,thr=1e-2;peak_video_ari=0.5564@35k	no	5dc1364
+2	0.0015352950431406498	image_ari=0.7375;video_ari=0.5606;mse=0.00148;lr=2e-4;warmup=[3e4,4e4];z=s=1e-2,loop=1e-2,iso=1e-2,thr=1e-2;best@45k;video_ari@30k(pre-vel)=0.5615	no	5617d7a
+3	0.0012639878550544381	image_ari=0.7764;video_ari=0.5808;mse=0.00123;lr=2e-4;warmup=[2e4,3e4];z=s=5e-3,loop=5e-3,iso=1e-2,thr=1e-2;vs_control=+0.0209;vs_BASE=-0.0279	yes	4d793fa
+4	0.0008412866154685616	image_ari=0.7854;video_ari=0.5850;mse=0.00082;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=2e-3,iso=1e-2,thr=1e-2;vs_control=+0.0251;vs_BASE=-0.0237	yes	7e543af
+5	0.0009778320090845227	image_ari=0.7899;video_ari=0.5911;mse=0.00095;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=1e-2;vs_control=+0.0312;vs_BASE=-0.0176;note=resumed@25k after SIGTERM	yes	06046eb
+6	0.0013160556554794312	image_ari=0.7860;video_ari=0.5838;mse=0.00129;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=2e-3,iso=1e0,thr=1e-2;vs_control=+0.0239;vs_incumbent(t5)=-0.0073	no	f876d8b
+7	0.0010422436753287911	image_ari=0.7864;video_ari=0.5857;mse=0.00102;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=1e-1;vs_control=+0.0258;vs_incumbent(t5)=-0.0054	no	f48e4ed
+8	0.0012754612835124135	image_ari=0.7875;video_ari=0.5842;mse=0.00126;lr=2e-4;warmup=[2e4,3e4];z=s=1e-3,loop=1e-3,iso=1e-1,thr=1e-2;vs_control=+0.0243;vs_incumbent(t5)=-0.0069	no	4c7127e
+9	0.0014318148605525494	image_ari=0.7579;video_ari=0.5601;mse=0.00141;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=1e-2,iso=1e-1,thr=1e-2;vs_control=+0.0002;vs_incumbent(t5)=-0.0310	no	6dc5615
+10	0.0012668764684349298	image_ari=0.7846;video_ari=0.5799;mse=0.00124;lr=2e-4;warmup=[2e4,3e4];z=s=2e-3,loop=1e-3,iso=1e-1,thr=1e-2;vs_control=+0.0200;vs_incumbent(t5)=-0.0112	no	3e959d9
+11	0.0011377758346498013	image_ari=0.7735;video_ari=0.5734;mse=0.00111;lr=2e-4;warmup=[2e4,4e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=1e-2;vs_control=+0.0135;vs_incumbent(t5)=-0.0177	no	6cfa39f
+12	0.0009696161723695695	image_ari=0.7287;video_ari=0.5472;mse=0.00095;lr=2e-4;warmup=[1e4,2e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=1e-2;best@40k;vs_control=-0.0127;vs_incumbent(t5)=-0.0439	no	ccfa2cd
+13	0.0011087217135354877	image_ari=0.7912;video_ari=0.5932;mse=0.00108;lr=2e-4;warmup=[3e4,4e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=1e-2;vs_control=+0.0333;vs_incumbent(t5)=+0.0021;vs_BASE=-0.0155	yes	bcd3632
+14	0.0009160254849120975	image_ari=0.7731;video_ari=0.5766;mse=0.00089;lr=2e-4;warmup=[3e4,4e4];z=s=2e-3,loop=2e-3,iso=3e-1,thr=1e-2;vs_control=+0.0167;vs_incumbent(t13)=-0.0166	no	e34f020
+15	0.0009201960056088865	image_ari=0.7913;video_ari=0.5881;mse=0.00089;lr=2e-4;warmup=[3e4,4e4];z=s=2e-3,loop=2e-3,iso=1e-1,thr=5e-3;vs_control=+0.0282;vs_incumbent(t13)=-0.0051	no	a42cdce
+16	0.0009407493053004146	image_ari=0.7623;video_ari=0.5678;mse=0.00091;lr=2e-4;warmup=[3e4,4e4];z=s=3e-3,loop=2e-3,iso=1e-1,thr=1e-2;vs_control=+0.0079;vs_incumbent(t13)=-0.0254	no	35c7d4f
+17	0.0008829696453176439	image_ari=0.7870;video_ari=0.5662;mse=0.86e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.002,loop=0.002,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0302	yes	710181b
+18	0.0012376224622130394	image_ari=0.7883;video_ari=0.5790;mse=1.18e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0430	yes	9bf743d
+19	0.0014498659875243902	image_ari=0.7160;video_ari=0.5258;mse=1.37e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.03,loop=0.03,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=-0.0102	no	bcce3c8
+20	0.0011610436486080289	image_ari=0.7434;video_ari=0.5426;mse=1.10e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.01,loop=0.01,iso=1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0067	yes	78dbf3b
+21	0.0010681785643100739	image_ari=0.7589;video_ari=0.5559;mse=1.02e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.005,loop=0.005,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0200	yes	389b685
+22	0.0014038971858099103	image_ari=0.7442;video_ari=0.5427;mse=1.34e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.01,loop=0.01,iso=0.01,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0067	yes	0c03f36
+23	0.0012709407601505518	image_ari=0.7924;video_ari=0.5859;mse=1.21e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0500;rerun_of=18	yes	4eabd15
+24	0.0012763604754582047	image_ari=0.7509;video_ari=0.5574;mse=1.22e-3;lr=2e-4;warmup=[3e4,4e4];z=s=0.01,loop=0.002,iso=0.1,thr=0.01;hm=true;1gpu;vs_t0_hm=+0.0214	yes	cdbb3ca
+25	0.0013095643371343613	image_ari=0.7788;video_ari=0.5687;mse=1.27e-3;lr=2e-4;warmup=[2e4,3e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;best@50k;vs_t0_hm=+0.0327	yes	fe98b8b
+26	0.0011199942091479897	image_ari=0.7266;video_ari=0.5308;mse=1.08e-3;lr=2e-4;warmup=[1e4,2e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;best@45k;vs_t0_hm=-0.0051	no	cd1c1a7
+27	0.0010726432083174586	image_ari=0.8132;video_ari=0.5940;mse=0.99e-3;lr=2e-4;warmup=[4e4,5e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;clevr_yaml=r_norm0.44;vs_t0_hm=+0.0580	yes	dfb3a1a
+28	0.0010398045415058732	image_ari=0.7773;video_ari=0.5768;mse=0.98e-3;lr=2e-4;warmup=[3e4,5e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;clevr_yaml=r_norm0.44;vs_t0_hm=+0.0408	yes	84463dd
+0_100k	0.18797942996025085	image_ari=0.8663;video_ari=0.6794;mse=0.49e-3;eval=hm,ckpt=model.pt@100k (best_model@65k by valid_loss: video_ari_hm=0.5662,image_ari=0.7995,mse=0.74e-3);warmup=[2e5,3e5](vel off);hm_train=false;1gpu;100k	control_100k	35f2a50
+27_100k	0.0005086970049887896	image_ari=0.8860;video_ari=0.7594;mse=0.48e-3;best@100k;warmup=[4e4,5e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;100k;vs_t0_100k_hm_final=+0.0800	yes	35f2a50
+0_150k	0.18311159312725067	image_ari=0.8674;video_ari=0.7155;mse=0.41e-3;eval=hm,ckpt=model.pt@150k (train_state_hm_final_at150k.yaml; best_model@125k by valid_loss);no-hm video_ari avg130-150k=0.631;warmup=[2e5,3e5](vel off);hm_train=false;1gpu;dir=trial_0_100k	control_150k	35f2a50
+27_150k	0.0003647474222816527	image_ari=0.9000;video_ari=0.8280;mse=0.35e-3;best@150k;avg130-150k video_ari=0.812;warmup=[4e4,5e4];z=s=0.01,loop=0.01,iso=0.1,thr=0.01;hm=true;1gpu;dir=trial_27_100k;vs_t0_150k_hm_final=+0.1126	yes	35f2a50
+0_200k	0.1777220070362091	image_ari=0.9041;video_ari=0.7604;mse=0.27e-3;eval=hm,ckpt=model.pt@200k (train_state_hm_final_at200k.yaml; best_model@175k by valid_loss);no-hm video_ari avg180-200k=0.649;150k-200k on REGENERATED data;dir=trial_0_100k	control_200k	4387963
+27_200k	0.00029363363864831626	image_ari=0.9024;video_ari=0.8479;mse=0.28e-3;best@200k;avg180-200k video_ari=0.849;150k-200k on REGENERATED data;dir=trial_27_100k;vs_t0_200k_hm_final=+0.0875	yes	4387963
+0_250k	0.00029516208451241255	image_ari=0.9165;video_ari=0.7831;mse=0.23e-3;eval=hm,ckpt=model.pt@250k;CONTAMINATED: warmup [2e5,3e5] turned vel loss on (lambda 0->0.5, no hm) during 200k-250k, not a clean control;dir=trial_0_100k	control_250k_contaminated	4387963
+27_250k	0.00025210960302501917	image_ari=0.9097;video_ari=0.8664;mse=0.25e-3;@250k (best_model@240k: 0.8729/0.918/0.24e-3);avg230-250k video_ari=0.870;dir=trial_27_100k	yes	4387963
