@@ -47,6 +47,11 @@ class BaseTrainer:
     # ------------------------------------------------------------------ #
     accelerator: Optional[Accelerator] = field(default=None)
     wandb_run: wandb = field(default=None)
+    # number of validation batches per evaluation (per process)
+    eval_steps: int = field(default=100)
+    # apply the vel-loss lambda warmup (current iteration) to the validation loss / best-model selection.
+    # Off by default: validation then uses the full vel-loss weight, as before.
+    eval_lambda_warmup: bool = field(default=False)
 
     model: BaseModel = field(init=False)
     dataloaders: List[DataLoader] = field(init=False)
@@ -270,9 +275,15 @@ class BaseTrainer:
                 logging.info("Starting evaluation")
             self.accelerator.unwrap_model(self.model).eval()
         
+            model_step = None
+            if self.eval_lambda_warmup and self.accelerator.unwrap_model(self.model).name in [
+                "monet-velocity", "sa-velocity", "tf-velocity"
+            ]:
+                model_step = trainer.state.iteration
             losses, metrics = self.evaluator.eval(
             self.accelerator.unwrap_model(self.model),
-            steps=100
+            steps=self.eval_steps,
+            model_step=model_step,
             )
             if self.is_main_process:
                 self.logger.log_dict(

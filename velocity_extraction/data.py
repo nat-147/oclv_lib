@@ -13,6 +13,23 @@ from spriteworld import sprite, renderers
 from velocity_extraction.utils import convert_range
 
 
+def _check_dataset_config(config_path, expected):
+    """Refuse to touch an existing dataset whose config.txt differs from the requested one.
+    (Previously the whole directory was rmtree'd and regenerated, which silently destroyed shared data.)"""
+    with open(config_path, 'r') as f:
+        found = f.read()[:-1]
+    if found == expected:
+        return
+    old = dict(l.split(': ', 1) for l in found.splitlines() if ': ' in l)
+    new = dict(l.split(': ', 1) for l in expected.splitlines() if ': ' in l)
+    diff = {k: (old.get(k), new.get(k)) for k in sorted(set(old) | set(new)) if old.get(k) != new.get(k)}
+    raise RuntimeError(
+        f"Dataset config mismatch for {os.path.dirname(config_path)} (on disk -> requested): {diff}. "
+        "Not deleting existing data. Use the matching dataset args, point dataset_path at a new directory, "
+        "or remove the directory yourself if it really should be regenerated."
+    )
+
+
 class ContinuousShiftingSpritesloops(Dataset):
     def __init__(
         self,
@@ -102,12 +119,7 @@ class ContinuousShiftingSpritesloops(Dataset):
             self.create_dirs()
 
             if os.path.isfile(self.config_path):
-                with open(self.config_path, 'r') as f:
-                    if f.read()[:-1] != repr(self):
-                        shutil.rmtree(self.path)
-
-                        self.create_dirs()
-                        self.create_config()
+                _check_dataset_config(self.config_path, repr(self))
             else:
                 self.create_config()
 
@@ -364,8 +376,8 @@ class Clevr(ContinuousShiftingSpritesloops):
         path, train,
         patch_size,
         random_walk_length=10, repeat_twice=True,
-        r_norm=0.41, max_shift=0.1, world_scale=5.0, max_tries_num=800,
-        disk=2.2, gap=1.5, in_frame=1.0, vis_min=0.3, vis_need=0.0,
+        r_norm=0.44, max_shift=0.1, world_scale=5.0, max_tries_num=800,
+        gap=1.5, in_frame=1.0, vis_min=0.3, vis_need=0.0,
         obj_count_distribution={2: 0.05, 3: 0.20, 4: 0.25, 5: 0.25, 6: 0.25},
         lens=0.0, spp=64, amodal=1, seed=0,
         blender='velocity_extraction/clevr/tools/blender-3.3.21-linux-x64/blender',
@@ -390,7 +402,8 @@ class Clevr(ContinuousShiftingSpritesloops):
         self.separate_velocity = False
 
         self.r_norm, self.max_shift, self.world_scale, self.max_tries_num = r_norm, max_shift, world_scale, max_tries_num
-        self.disk, self.gap, self.in_frame, self.vis_min, self.vis_need = disk, gap, in_frame, vis_min, vis_need
+        # 배치 원판 반경은 r_norm·world_scale (gen_loop_scenario.py에서 계산)
+        self.gap, self.in_frame, self.vis_min, self.vis_need = gap, in_frame, vis_min, vis_need
         self.obj_count_distribution = {int(k): float(v) for k, v in dict(obj_count_distribution).items()}
         self.lens, self.spp, self.amodal, self.seed = lens, spp, amodal, seed
         self.blender, self.gen_script = blender, gen_script
@@ -421,11 +434,7 @@ class Clevr(ContinuousShiftingSpritesloops):
         if rank == 0:
             self.create_dirs()
             if os.path.isfile(self.config_path):
-                with open(self.config_path, 'r') as f:
-                    if f.read()[:-1] != repr(self):
-                        shutil.rmtree(self.path)
-                        self.create_dirs()
-                        self.create_config()
+                _check_dataset_config(self.config_path, repr(self))
             else:
                 self.create_config()
             # 데이터가 불완전하면 예전 완료 파일을 barrier 전에 지워 다른 rank가 먼저 넘어가지 않게 함
@@ -449,7 +458,7 @@ class Clevr(ContinuousShiftingSpritesloops):
 
     def __repr__(self):
         keys = ['patch_size', 'total_path_length', 'num_training', 'num_testing', 'random_walk_length', 'repeat_twice',
-                'r_norm', 'max_shift', 'world_scale', 'max_tries_num', 'disk', 'gap', 'in_frame', 'vis_min', 'vis_need',
+                'r_norm', 'max_shift', 'world_scale', 'max_tries_num', 'gap', 'in_frame', 'vis_min', 'vis_need',
                 'obj_count_distribution', 'lens', 'spp', 'seed']
         if self.num_validation > 0:   # 2분할 데이터셋의 config.txt와 그대로 맞도록 3분할일 때만 추가
             keys.insert(keys.index('num_testing'), 'num_validation')
@@ -461,7 +470,7 @@ class Clevr(ContinuousShiftingSpritesloops):
                 '--amodal', str(int(self.amodal)), '--device', self.device,
                 '--walk_len', str(self.random_walk_length), '--repeat_twice', str(int(self.repeat_twice)),
                 '--r_norm', str(self.r_norm), '--max_shift', str(self.max_shift), '--world_scale', str(self.world_scale),
-                '--max_tries', str(self.max_tries_num), '--disk', str(self.disk), '--gap', str(self.gap),
+                '--max_tries', str(self.max_tries_num), '--gap', str(self.gap),
                 '--in_frame', str(self.in_frame), '--vis_min', str(self.vis_min), '--vis_need', str(self.vis_need),
                 '--counts', counts]
 

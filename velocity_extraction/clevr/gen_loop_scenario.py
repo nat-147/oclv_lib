@@ -7,11 +7,12 @@
   1) 걸음 K개(--walk_len, 기본 10): 걸음마다 x, y 이동량을 ±max_shift에서 균등하게 뽑음
   2) --repeat_twice 1이면 걸음마다 두 번씩 반복 (2K걸음)
   3) 같은 걸음들을 부호만 바꿔 이어 붙임 → 출발점으로 돌아오는 폐곡선. 프레임 수 = 4K+1 (repeat 0이면 2K+1). 기본 41
-  4) 경로 평균을 0에 맞추고, x·y 범위가 모두 (1 − 1.5·r_norm)보다 작을 때만 채택
-  원본 값은 화면 너비 = 1 단위. 바닥 평면에서 × --world_scale(기본 5)을 월드 단위로 씀 → 걸음당 최대 0.5, 경로 범위 < 1.925
+  4) 경로 평균을 0에 맞추고, x·y 범위가 모두 (1 − 1.4·r_norm)보다 작을 때만 채택 (sprites는 1.5)
+  원본 값은 화면 너비 = 1 단위. 바닥 평면에서 × --world_scale(기본 5)을 월드 단위로 씀 → 걸음당 최대 0.5, 경로 범위 < 1.92
 배치 (시나리오 A의 traj_S1과 같은 방식)
   - 모든 객체가 같은 경로를 함께 이동 (same velocity). 원 대신 랜덤 폐곡선이라는 점만 A와 다름
-  - 객체마다 경로 평균 위치를 반경 --disk(기본 2.2) 원판 안에서 면적 균등으로 뽑음
+  - 객체마다 경로 평균 위치를 반경 r_norm·world_scale(기본 0.44×5 = 2.2) 원판 안에서 면적 균등으로 뽑음
+    (sprites처럼 r_norm 하나로 배치 범위와 경로 크기를 같이 정함)
   - 바닥 평면 거리 > --gap·(r_i + r_j) (기본 1.5, A와 같음). 3D 충돌(외접구)도 모든 프레임에서 확인
 가려짐 (원본 occlusion_ratio 대신 visible_ratio 기준)
   - 렌더링 전에 객체 실루엣을 투영해(볼록 도형이라 투영 꼭짓점의 볼록 껍질 = 실루엣) 카메라에서 먼 객체부터 칠하고
@@ -42,10 +43,11 @@ SIZE = arg("--size", 128, int); LENS = arg("--lens", 0.0, float); SPP = arg("--s
 RES = (SIZE, SIZE)
 # 경로: contshiftingsprites_occlusion.yaml 값 (화면 너비 = 1 단위)
 WALK = arg("--walk_len", 10, int); REPEAT = arg("--repeat_twice", 1, int)
-R_NORM = arg("--r_norm", 0.41, float); MAX_SHIFT = arg("--max_shift", 0.1, float)
+R_NORM = arg("--r_norm", 0.44, float); MAX_SHIFT = arg("--max_shift", 0.1, float)
 WS = arg("--world_scale", 5.0, float); MAX_TRIES = arg("--max_tries", 800, int)
-# 배치: 시나리오 A 값 (월드 단위)
-DISK = arg("--disk", 2.2, float); GAP = arg("--gap", 1.5, float)
+# 배치: 경로 평균 위치를 뽑는 원판 반경 (월드 단위) = r_norm·world_scale
+DISK = R_NORM*WS; GAP = arg("--gap", 1.5, float)
+PATH_K = 1.4   # 경로 범위 < 1 − PATH_K·r_norm. r_norm 0.44에서 예전 r_norm 0.41·1.5의 0.385와 거의 같게 (0.384)
 IN_FRAME = arg("--in_frame", 1.0, float)   # 모든 객체가 모든 프레임에서 실루엣 면적의 이 비율 이상이 화면 안에 있어야 채택 (1 = 잘리지 않음, 0 = 끔)
 # 가려짐: 추정 visible ratio 기준
 VIS_MIN = arg("--vis_min", 0.3, float); VIS_NEED = arg("--vis_need", 0.0, float)
@@ -174,7 +176,7 @@ def closed_path(rng):
         v = np.concatenate([v, -v], axis=0)
         p = np.zeros((len(v) + 1, 2)); p[1:] = np.cumsum(v, axis=0)
         p -= p.mean(0)
-        if all(p.max(0) - p.min(0) < 1 - 1.5*R_NORM):
+        if all(p.max(0) - p.min(0) < 1 - PATH_K*R_NORM):
             return p*WS, v*WS
     return None, None
 

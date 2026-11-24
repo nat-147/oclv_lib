@@ -13,12 +13,11 @@ dataset:
   # 경로 (화면 너비 = 1 단위, 바닥에서 x world_scale)
   random_walk_length: 10   # 프레임 수 = 4*10+1 = 41
   repeat_twice: true
-  r_norm: 0.41
+  r_norm: 0.44       # 경로 범위 < 1 − 1.4·r_norm, 배치 원판 반경 = r_norm·world_scale (= 2.2)
   max_shift: 0.1
   world_scale: 5.0
   max_tries_num: 800
   # 배치 / 가려짐 (시나리오 A)
-  disk: 2.2
   gap: 1.5
   in_frame: 1.0
   vis_min: 0.3

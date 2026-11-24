@@ -3,7 +3,6 @@ import platform
 from pathlib import Path
 
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 import hydra
 from omegaconf import OmegaConf
@@ -108,6 +107,8 @@ def main(config):
             "trainer.checkpoint_path", "trainer.logweights_steps",
             "trainer.logimages_steps", "trainer.logloss_steps",
             "trainer.resubmit_steps", "trainer.resubmit_hours",
+            "trainer.eval_steps",  # evaluation-only knob, doesn't affect training
+            "trainer.eval_lambda_warmup",  # validation-loss weighting only, doesn't affect training
             "device", "num_workers",
         ]
         if not omegaconf_equal(config, prev_config, ignore=ignore_list):
