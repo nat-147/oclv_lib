@@ -1,0 +1,68 @@
+# @package _global_
+
+defaults:
+  - _base
+
+batch_size: 4
+trainer:
+  _target_: models.monet-velocity.trainer.MONetTrainer
+  init_trunc_normal: false
+  init_mean: 0.0
+  init_std: 0.02
+  steps: 50000
+  use_exp_decay: true
+  exp_decay_rate: 0.5
+  exp_decay_steps: 100_000
+  optimizer_config:
+    alg: Adam
+    lr: 0.0002
+
+
+model:
+  _target_: models.monet-velocity.model.MonetVelocity
+  name: monet-velocity
+  num_slots: ${dataset.max_num_objects}
+  bg_sigma: 0.09
+  fg_sigma: 0.11
+  num_blocks_unet: 6
+  beta_kl: 0.5
+  gamma: 0.5
+  latent_size: 16
+  encoder_params:
+    channels: [32, 32, 64, 64]
+    kernels: [3, 3, 3, 3]
+    strides: [2, 2, 2, 2]
+    paddings: [0, 0, 0, 0]
+    input_channels: 4
+    batchnorms: [false, false, false, false]
+    bn_affines: [false, false, false, false]
+    activations: relu
+    mlp_hidden_size: 256
+    mlp_output_size: 32  # latent_size * 2
+  decoder_params:
+    w_broadcast: ${dataset.width} + 8
+    h_broadcast: ${dataset.height} + 8
+    input_channels: 18  # latent_size + 2   
+    channels: [32, 32, 64, 64, 4]  # last is 4 channels because rgb (3) + mask (1)    
+    kernels: [3, 3, 3, 3, 1]
+    paddings: [0, 0, 0, 0, 0]   
+    activations: [relu, relu, relu, relu, null]
+    batchnorms: [false, false, false, false, false]
+    bn_affines: [false, false, false, false, false]
+
+  use_vel_extractor: true
+  use_input_pairs: false
+  hungarian_matching: false
+  use_lambda_warmup: false
+  
+  lambda_warmup_steps_interval: [10_000, 20_000]
+  vel_loss_weights:
+    vel_loss_weight_lambda: 1
+    z_pred_loss_weight: 1
+    loop_loss_weight: 1
+    shortcut_loss_weight: 1
+    isometry_loss_weight: 1
+    isometry_similarity_threshold: 1e-2
+    
+
+  

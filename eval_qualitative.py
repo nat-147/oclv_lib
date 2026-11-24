@@ -68,8 +68,8 @@ def save_visualization(batch, output, results_path, max_n_slots, num_images):
         if batch["image"].shape[1] != output["slot"].shape[1]:
             batch.update({k: v[:, 2] for k, v in batch.items() if v.dim() > 1})
         else:
-            batch.update({k: v[:, 0] for k, v in batch.items() if v.dim() > 1})
-        output.update({k: v[:, 0] for k, v in output.items() if v.dim() > 1})
+            batch.update({k: v[0, :] for k, v in batch.items() if v.dim() > 1})
+        output.update({k: v[0, :] for k, v in output.items() if v.dim() > 1})
 
         if "mask" not in batch:
             batch["mask"] = image_to_masks(

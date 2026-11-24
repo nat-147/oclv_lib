@@ -13,6 +13,23 @@ from spriteworld import sprite, renderers
 from velocity_extraction.utils import convert_range
 
 
+def _check_dataset_config(config_path, expected):
+    """Refuse to touch an existing dataset whose config.txt differs from the requested one.
+    (Previously the whole directory was rmtree'd and regenerated, which silently destroyed shared data.)"""
+    with open(config_path, 'r') as f:
+        found = f.read()[:-1]
+    if found == expected:
+        return
+    old = dict(l.split(': ', 1) for l in found.splitlines() if ': ' in l)
+    new = dict(l.split(': ', 1) for l in expected.splitlines() if ': ' in l)
+    diff = {k: (old.get(k), new.get(k)) for k in sorted(set(old) | set(new)) if old.get(k) != new.get(k)}
+    raise RuntimeError(
+        f"Dataset config mismatch for {os.path.dirname(config_path)} (on disk -> requested): {diff}. "
+        "Not deleting existing data. Use the matching dataset args, point dataset_path at a new directory, "
+        "or remove the directory yourself if it really should be regenerated."
+    )
+
+
 class ContinuousShiftingSpritesloops(Dataset):
     def __init__(
         self,
@@ -102,12 +119,7 @@ class ContinuousShiftingSpritesloops(Dataset):
             self.create_dirs()
 
             if os.path.isfile(self.config_path):
-                with open(self.config_path, 'r') as f:
-                    if f.read()[:-1] != repr(self):
-                        shutil.rmtree(self.path)
-
-                        self.create_dirs()
-                        self.create_config()
+                _check_dataset_config(self.config_path, repr(self))
             else:
                 self.create_config()
 
@@ -345,3 +357,238 @@ class ContinuousShiftingSpritesloops(Dataset):
         colors[:, -1] = np.ones(colors.shape[0])
 
         return colors
+
+
+class Clevr(ContinuousShiftingSpritesloops):
+    """CLEVR 시나리오 A-loop (clevr/gen_loop_scenario.py)를 Blender로 생성해 ContinuousShiftingSpritesloops와
+    같은 형식으로 저장/로드.
+
+    저장: <path>/{train,test}/images_{i}.pt  uint8 (T, 4, H, W) = RGB + mask(객체 번호 1..n, 배경 0)
+          <path>/{train,test}/vs_{i}.pt      float32 (T-1, 2)  모든 객체 공통 이동량 (월드 이동량 / world_scale,
+                                             즉 generate_closed_path와 같은 단위, |v| <= max_shift)
+          <path>/raw/{train,test}/seq_*      Blender 원본 출력 (png, meta.json). keep_raw=False면 변환 후 삭제
+    __getitem__ 출력은 ContinuousShiftingSpritesloops와 같음 (RGB 0~1 float, mask 채널은 정수 번호 float).
+    train은 seed, test는 seed+1로 생성해 겹치지 않음.
+    """
+
+    def __init__(
+        self,
+        path, train,
+        patch_size,
+        random_walk_length=10, repeat_twice=True,
+        r_norm=0.44, max_shift=0.1, world_scale=5.0, max_tries_num=800,
+        gap=1.5, in_frame=1.0, vis_min=0.3, vis_need=0.0,
+        obj_count_distribution={2: 0.05, 3: 0.20, 4: 0.25, 5: 0.25, 6: 0.25},
+        lens=0.0, spp=64, amodal=1, seed=0,
+        blender='velocity_extraction/clevr/tools/blender-3.3.21-linux-x64/blender',
+        gen_script='velocity_extraction/clevr/gen_loop_scenario.py',
+        num_gen_procs=8, gpus=None, device='CUDA', keep_raw=True,
+        num_training=1000, num_testing=200, num_validation=0, split=None,
+        data_to_ocl=False,
+        input_channels=3, num_background_objects=1, max_num_objects=7,
+        **unused,
+    ):
+        assert patch_size[0] == patch_size[1]
+        Dataset.__init__(self)
+
+        self.path = str(path)
+        self.config_path = os.path.join(self.path, 'config.txt')
+        self.train = train
+        self.patch_size = tuple(patch_size)
+
+        self.random_walk_length = random_walk_length
+        self.repeat_twice = repeat_twice
+        self.total_path_length = 4*random_walk_length + 1 if repeat_twice else 2*random_walk_length + 1
+        self.separate_velocity = False
+
+        self.r_norm, self.max_shift, self.world_scale, self.max_tries_num = r_norm, max_shift, world_scale, max_tries_num
+        # 배치 원판 반경은 r_norm·world_scale (gen_loop_scenario.py에서 계산)
+        self.gap, self.in_frame, self.vis_min, self.vis_need = gap, in_frame, vis_min, vis_need
+        self.obj_count_distribution = {int(k): float(v) for k, v in dict(obj_count_distribution).items()}
+        self.lens, self.spp, self.amodal, self.seed = lens, spp, amodal, seed
+        self.blender, self.gen_script = blender, gen_script
+        self.num_gen_procs, self.gpus, self.device, self.keep_raw = num_gen_procs, gpus, device, keep_raw
+
+        self.num_training = int(num_training)
+        self.num_testing = int(num_testing)
+        # num_validation > 0 이면 train/valid/test 3분할 (valid/ 폴더 추가). 0이면 예전 train/test 2분할
+        self.num_validation = int(num_validation or 0)
+        self.split = split or ('train' if train else 'test')
+        assert self.split in ('train', 'valid', 'test'), self.split
+        assert self.split != 'valid' or self.num_validation > 0, 'valid split은 num_validation > 0 일 때만 있음'
+
+        self.data_to_ocl = data_to_ocl
+        self.name = 'clevr'
+        self.identifier = 'clevr'
+        self.input_channels = input_channels
+        self.num_background_objects = num_background_objects
+        self.max_num_objects = max_num_objects
+
+        split = self.split
+        num = {'train': self.num_training, 'valid': self.num_validation, 'test': self.num_testing}[split]
+        self.seeds = torch.arange(num)
+        done_flag = os.path.join(self.path, split, '.complete')
+        last_file = os.path.join(self.path, split, f'images_{num - 1}.pt')
+
+        rank, world_size = self._dist_rank_and_world_size()
+        if rank == 0:
+            self.create_dirs()
+            if os.path.isfile(self.config_path):
+                _check_dataset_config(self.config_path, repr(self))
+            else:
+                self.create_config()
+            # 데이터가 불완전하면 예전 완료 파일을 barrier 전에 지워 다른 rank가 먼저 넘어가지 않게 함
+            if not os.path.exists(last_file) and os.path.exists(done_flag):
+                os.remove(done_flag)
+        self._dist_barrier(world_size)
+
+        if rank == 0:
+            if not os.path.exists(last_file):
+                print(f"Generating new {split}ing CLEVR A-loop sequences with Blender..")
+                self.generate_dataset(num)
+                print("Sequences of frames completely saved")
+            open(done_flag, 'w').close()
+        else:
+            # 생성은 1시간 넘게 걸릴 수 있어 NCCL barrier(기본 30분)로 기다리면 타임아웃.
+            # rank 0이 완료 파일을 쓸 때까지 파일 확인으로 기다림 (rank 0이 죽으면 launcher가 같이 종료시킴)
+            import time
+            while not os.path.exists(done_flag):
+                time.sleep(10)
+        self._dist_barrier(world_size)
+
+    def __repr__(self):
+        keys = ['patch_size', 'total_path_length', 'num_training', 'num_testing', 'random_walk_length', 'repeat_twice',
+                'r_norm', 'max_shift', 'world_scale', 'max_tries_num', 'gap', 'in_frame', 'vis_min', 'vis_need',
+                'obj_count_distribution', 'lens', 'spp', 'seed']
+        if self.num_validation > 0:   # 2분할 데이터셋의 config.txt와 그대로 맞도록 3분할일 때만 추가
+            keys.insert(keys.index('num_testing'), 'num_validation')
+        return ''.join(f'{k}: {getattr(self, k)}\n' for k in keys)
+
+    def _gen_args(self):
+        counts = ','.join(f'{k}:{v}' for k, v in self.obj_count_distribution.items())
+        return ['--size', str(self.patch_size[0]), '--lens', str(self.lens), '--spp', str(self.spp),
+                '--amodal', str(int(self.amodal)), '--device', self.device,
+                '--walk_len', str(self.random_walk_length), '--repeat_twice', str(int(self.repeat_twice)),
+                '--r_norm', str(self.r_norm), '--max_shift', str(self.max_shift), '--world_scale', str(self.world_scale),
+                '--max_tries', str(self.max_tries_num), '--gap', str(self.gap),
+                '--in_frame', str(self.in_frame), '--vis_min', str(self.vis_min), '--vis_need', str(self.vis_need),
+                '--counts', counts]
+
+    def _run_blender(self, out, seed, start, num):
+        """[start, start+num) 시퀀스를 num_gen_procs개 Blender 프로세스로 나눠 생성"""
+        import subprocess
+        # gpus는 현재 보이는 GPU 기준 번호. 부모 CUDA_VISIBLE_DEVICES가 있으면 실제 GPU 번호로 바꿔 넘김
+        visible = [g for g in os.environ.get('CUDA_VISIBLE_DEVICES', '').split(',') if g.strip()]
+        gpus = list(self.gpus) if self.gpus is not None else list(range(max(torch.cuda.device_count(), 1)))
+        if visible:
+            gpus = [visible[int(g)] for g in gpus]
+        nproc = max(1, min(int(self.num_gen_procs), num))
+        chunks = np.array_split(np.arange(start, start + num), nproc)
+        os.makedirs(os.path.join(out, 'logs'), exist_ok=True)
+        procs = []
+        for p, c in enumerate(chunks):
+            if len(c) == 0:
+                continue
+            env = dict(os.environ, CUDA_VISIBLE_DEVICES=str(gpus[p % len(gpus)]))
+            cmd = [self.blender, '-b', '-P', self.gen_script, '--', '--out', out, '--seed', str(seed),
+                   '--start', str(int(c[0])), '--num', str(len(c))] + self._gen_args()
+            log = open(os.path.join(out, 'logs', f'gen_{int(c[0])}.log'), 'w')
+            procs.append((subprocess.Popen(cmd, env=env, stdout=log, stderr=subprocess.STDOUT), log))
+        try:
+            for pr, log in procs:
+                pr.wait()   # Blender는 @@DONE 뒤 종료할 때 segfault가 날 수 있음 (무해). 결과는 meta.json 유무로 확인
+        finally:
+            # 중단/에러 시 남은 Blender를 끝까지 정리해야 raw 삭제 뒤 png가 다시 생기지 않음
+            for pr, log in procs:
+                if pr.poll() is None:
+                    pr.kill()
+                pr.wait()
+                log.close()
+
+    @staticmethod
+    def _done_seqs(out):
+        if not os.path.isdir(out):
+            return []
+        return sorted(d for d in os.listdir(out)
+                      if d.startswith('seq_') and os.path.isfile(os.path.join(out, d, 'meta.json')))
+
+    def create_dirs(self):
+        super().create_dirs()
+        if self.num_validation > 0:
+            os.makedirs(os.path.join(self.path, 'valid'), exist_ok=True)
+
+    # 3분할에서 test는 valid와 같은 seed(seed+1)를 쓰되 시퀀스 번호를 TEST_SI_START부터 써서 겹치지 않게 함
+    TEST_SI_START = 10000
+
+    def _split_seed_and_start(self, split):
+        if split == 'train':
+            return self.seed, 0
+        if split == 'test' and self.num_validation > 0:
+            return self.seed + 1, self.TEST_SI_START
+        return self.seed + 1, 0   # 2분할의 test, 3분할의 valid
+
+    def generate_dataset(self, num_sets):
+        split = self.split
+        out = os.path.join(self.path, 'raw', split)
+        seed, si_start = self._split_seed_and_start(split)
+        try:
+            self._generate_and_convert(out, split, num_sets, seed, si_start)
+        finally:
+            # keep_raw=False면 성공/실패/중단(Ctrl+C) 모두 raw를 지움
+            if not self.keep_raw:
+                shutil.rmtree(out, ignore_errors=True)
+
+    def _generate_and_convert(self, out, split, num_sets, seed, si_start=0, index_offset=0):
+        """Blender 시퀀스 번호 si_start부터 num_sets개를 만들어 {split}/images_{index_offset + i}.pt로 저장.
+        index_offset > 0이면 기존 데이터 뒤에 이어 붙임 (scripts/extend_clevr_dataset.py)"""
+        import json
+
+        # 배치 조건을 못 찾아 건너뛴(@@SKIP) 시퀀스가 있으면 뒤 번호로 채움
+        nxt = si_start
+        for _ in range(10):
+            have = len(self._done_seqs(out))
+            if have >= num_sets:
+                break
+            nxt = max(nxt, si_start + have)
+            missing = num_sets - have
+            self._run_blender(out, seed, nxt, missing)
+            nxt += missing
+        seqs = self._done_seqs(out)[:num_sets]
+        assert len(seqs) == num_sets, f'{out}: {len(seqs)}/{num_sets} sequences generated (see {out}/logs)'
+
+        T = self.total_path_length
+        for index, s in enumerate(seqs):
+            d = os.path.join(out, s)
+            with open(os.path.join(d, 'meta.json')) as f:
+                meta = json.load(f)
+            frames = []
+            for t in range(1, T + 1):
+                rgb = np.array(Image.open(os.path.join(d, f'rgb_{t:04d}.png')).convert('RGB'))
+                m = np.array(Image.open(os.path.join(d, f'mask_{t:04d}.png')))
+                if m.ndim == 3:
+                    m = m[..., 0]
+                frames.append(np.concatenate([rgb, m[..., None]], axis=-1))
+            images = torch.from_numpy(np.stack(frames)).permute(0, 3, 1, 2).contiguous()          # uint8 (T, 4, H, W)
+            vs = torch.tensor(meta['trajectory']['velocity_xy'], dtype=torch.float32) / self.world_scale  # (T-1, 2)
+            assert images.shape[0] == T and vs.shape == (T - 1, 2), (d, images.shape, vs.shape)
+            torch.save(images, os.path.join(self.path, split, f'images_{index_offset + index}.pt'))
+            torch.save(vs, os.path.join(self.path, split, f'vs_{index_offset + index}.pt'))
+            if not self.keep_raw:
+                shutil.rmtree(d, ignore_errors=True)   # 변환 끝난 시퀀스는 바로 삭제
+
+    def __getitem__(self, index):
+        split = self.split
+        images = torch.load(os.path.join(self.path, split, f'images_{index}.pt'))
+        gt_vs = torch.load(os.path.join(self.path, split, f'vs_{index}.pt'))
+        images = images.float()
+        images[:, :3] /= 255.0
+
+        if self.data_to_ocl:
+            output = {}
+            output["image"] = images
+            output["velocity"] = gt_vs
+            output["is_foreground"] = torch.ones(self.total_path_length, self.max_num_objects, 1)
+            output["is_foreground"][:, :self.num_background_objects] = 0.0
+            output["is_modified"] = output["is_foreground"].unsqueeze(-1)
+            return output
+        return images, gt_vs

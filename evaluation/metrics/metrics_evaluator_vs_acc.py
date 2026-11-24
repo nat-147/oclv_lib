@@ -32,8 +32,8 @@ def dict_tensor_gather_mean(accelator: Accelerator, data: Dict[str, List[Tensor]
 _DEFAULT_METRICS = [
     "image_ari",
     "video_ari",
-    #"image_mbo",
-    #"video_mbo",
+    "image_mbo",
+    "video_mbo",
     "mse",
 ]
 
@@ -151,7 +151,11 @@ class MetricsEvaluator:
 
     @torch.no_grad()
     def _eval_step(self, engine: Engine, batch: dict):
-        batch, output = self._forward_pass(batch)
+        # step=None → model uses its full vel-loss weight; a training step applies the lambda warmup schedule
+        if getattr(self, "_model_step", None) is not None:
+            batch, output = self._forward_pass(batch, step=self._model_step)
+        else:
+            batch, output = self._forward_pass(batch)
         B, T, C, H, W = batch["image"].shape      
         K = output["mask"].shape[-4]
 
@@ -211,9 +215,11 @@ class MetricsEvaluator:
     
     @torch.no_grad()
     def eval(
-        self, model: BaseModel, steps: Optional[int] = None
+        self, model: BaseModel, steps: Optional[int] = None, model_step: Optional[int] = None
     ) -> Tuple[Dict[str, float], Dict[str, float]]:
-        
+        """model_step: training iteration passed to model.forward(step=...) so the vel-loss lambda
+        warmup applies to the validation loss too (only loss terms change, not ARI/mBO/MSE)."""
+        self._model_step = model_step
         engine = Engine(self._eval_step)
         results = {name: [] for name in self.metrics + list(self.loss_terms)}
 

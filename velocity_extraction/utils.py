@@ -38,7 +38,10 @@ def get_dataset_dataloader(config):
     dataset_args.update(train=True)
     train_dataset = config['dataset_class'](**dataset_args)
 
+    # eval_split='valid'면 학습 중 검증은 valid로 (CLEVR 3분할). 기본은 test
     dataset_args.update(train=False)
+    if config.get('eval_split', 'test') != 'test':
+        dataset_args.update(split=config['eval_split'])
     test_dataset = config['dataset_class'](**dataset_args)
 
     dataloader_args.update(

@@ -1,0 +1,60 @@
+# @package _global_
+
+defaults:
+  - _base
+
+batch_size: 4
+trainer:
+  _target_: models.sa-velocity.trainer.SlotAttentionTrainer
+  steps: 50_000
+  use_warmup_lr: true
+  warmup_steps: 10_000
+  use_exp_decay: true
+  exp_decay_rate: 0.5
+  exp_decay_steps: 100_000
+  optimizer_config:
+    alg: Adam
+    lr: 2e-4
+
+model:
+  _target_: models.sa-velocity.model.SAVelocityAE
+  name: sa-velocity
+  num_slots: ${dataset.max_num_objects}
+  latent_size: 64
+  encoder_params:
+    channels: [64, 64, 64, 64]
+    kernels: [5, 5, 5, 5]
+    paddings: [2, 2, 2, 2]
+    strides: [1, 1, 1, 1] 
+  decoder_params:
+    conv_transposes: true
+    channels: [64, 64, 64, 64, 64, 4]
+    kernels: [5, 5, 5, 5, 5, 3]
+    strides: [2, 2, 2, 2, 1, 1]
+    paddings: [2, 2, 2, 2, 2, 1]
+    output_paddings: [1, 1, 1, 1, 0, 0]
+    activations: [relu, relu, relu, relu, relu, null]
+  attention_iters: [3,1]
+  slot_init_type: 'learned'
+  temporal_prop: false
+  mlp_size: 128
+  eps: 1e-8
+  h_broadcast: 8
+  w_broadcast: 8
+  
+  use_vel_extractor: true
+  use_input_pairs: false
+  hungarian_matching: true
+  use_lambda_warmup: true
+
+  lambda_warmup_steps_interval: [40_000, 50_000]
+  vel_loss_weights:
+    vel_loss_weight_lambda: 1
+    z_pred_loss_weight: 1e-2
+    loop_loss_weight: 1e-2
+    shortcut_loss_weight: 1e-2
+    isometry_loss_weight: 1e-1
+    isometry_similarity_threshold: 1e-2
+
+  
+  

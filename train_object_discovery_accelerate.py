@@ -3,7 +3,6 @@ import platform
 from pathlib import Path
 
 import os
-os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "max_split_size_mb:256"
 
 import hydra
 from omegaconf import OmegaConf
@@ -108,6 +107,8 @@ def main(config):
             "trainer.checkpoint_path", "trainer.logweights_steps",
             "trainer.logimages_steps", "trainer.logloss_steps",
             "trainer.resubmit_steps", "trainer.resubmit_hours",
+            "trainer.eval_steps",  # evaluation-only knob, doesn't affect training
+            "trainer.eval_lambda_warmup",  # validation-loss weighting only, doesn't affect training
             "device", "num_workers",
         ]
         if not omegaconf_equal(config, prev_config, ignore=ignore_list):
@@ -162,9 +163,9 @@ def main(config):
     if accelerator.is_main_process:
         logging.info("Creating data loaders")
 
-    if config.dataset.name == 'contshiftingsprites':
+    if config.dataset.name in ('contshiftingsprites', 'clevr'):
         dataconfig = dict(
-            dataset_class=ContinuousShiftingSpritesloops,
+            dataset_class=hydra.utils.get_class(config.dataset._target_),
             dataset_args=hydra_to_dataset_args(config),
             dataloader_args=dict(
                 batch_size=config.batch_size // accelerator.num_processes,
@@ -174,6 +175,9 @@ def main(config):
                 prefetch_factor=config.prefetch_factor,
             )
         )
+        # 3분할 데이터셋이면 학습 중 검증(best model 선택)은 valid로 하고 test는 최종 평가에만 씀
+        if dataconfig['dataset_args'].get('num_validation', 0) > 0:
+            dataconfig['eval_split'] = 'valid'
         _, _, train_loader, test_loader = get_dataset_dataloader(dataconfig)
         dataloaders = [train_loader, test_loader]
     else:

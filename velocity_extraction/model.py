@@ -65,7 +65,13 @@ class VelocityExtractor(nn.Module):
     def compute_loss(self, true_z, loss_weights):       
         true_z1, true_z2, true_z3 = true_z[:,0:-1:2,:,:], true_z[:,1:-1:2,:,:], true_z[:,2::2,:,:]
         
-        pred_v_z1_z2 = self.encode(true_z1, true_z2)
+        zm = true_z.mean(dim=-2, keepdim=True)
+        zm1, zm2 = zm[:,0:-1:2,:,:], zm[:,1:-1:2,:,:]
+                    
+        pred_v_z1_z2 = self.encode(zm1, zm2).expand(-1,-1, true_z.shape[-2], -1) 
+
+        #pred_v_z1_z2 = self.encode(true_z1, true_z2)
+        
         pred_z3 = self.decode(pred_v_z1_z2, true_z2)
                 
 

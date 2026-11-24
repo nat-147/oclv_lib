@@ -7,6 +7,7 @@ from typing import Any, Callable, Dict, List, Literal, Optional, Tuple, Union
 
 import h5py
 import hydra
+from omegaconf import OmegaConf
 import matplotlib
 import numpy as np
 import torch
@@ -694,6 +695,22 @@ def hydra_to_dataset_args(cfg):
 
     num_training = int(data_sizes[0])
     num_testing = int(data_sizes[1])
+
+    if dataset_cfg.name == "clevr":
+        skip = {"_target_", "name", "width", "height", "dataset_path", "fg_count_distribution"}
+        dataset_args = {k: v for k, v in OmegaConf.to_container(dataset_cfg, resolve=True).items() if k not in skip}
+        dataset_args.update(
+            path=str(dataset_path),
+            patch_size=(width, height),
+            obj_count_distribution=dict(dataset_cfg["fg_count_distribution"]),
+            num_training=num_training,
+            num_testing=num_testing,
+            data_to_ocl=True,
+        )
+        # data_sizes [train, valid, test]의 세 번째 값이 있으면 3분할 (예전 [train, test, null]은 2분할 그대로)
+        if len(data_sizes) > 2 and data_sizes[2]:
+            dataset_args.update(num_validation=int(data_sizes[1]), num_testing=int(data_sizes[2]))
+        return dataset_args
 
     dataset_args = dict(
         path=str(dataset_path),
