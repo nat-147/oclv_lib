@@ -33,7 +33,12 @@ def ocv(model, images, gt_vs=None):
     if model.hungarian_matching:
             model.hungarian_matcher.reset()
             for t in range(T):
-                zs[:,t,] = model.hungarian_matcher(zs[:,t,])
+                if model.name == "monet-velocity":
+                    # MONet matches foreground slots only (slot 0 = background) and keeps each mask with its slot
+                    zs[:,t,1:], perm = model.hungarian_matcher.step(zs[:,t,1:])
+                    masks[t,1:] = masks[t,1:][perm[0]]
+                else:
+                    zs[:,t,] = model.hungarian_matcher(zs[:,t,])
 
 
     if model.name == "monet-velocity":
@@ -41,10 +46,12 @@ def ocv(model, images, gt_vs=None):
     else:
         z1, z2, z3 = zs[:,:-1:2,:,:], zs[:,1:-1:2,:,:], zs[:,2::2,:,:]
 
-    zm = zs.mean(dim=-2, keepdim=True)
+    # the velocity extractor sees foreground slots only for MONet (same as MonetVelocity.forward)
+    zs_v = zs[:,:,1:,:] if model.name == "monet-velocity" else zs
+    zm = zs_v.mean(dim=-2, keepdim=True)
     zm1, zm2 = zm[:,0:-1:2,:,:], zm[:,1:-1:2,:,:]
 
-    pred_vs = model.vel_extractor.encode(zm1, zm2).expand(-1,-1, zs.shape[-2], -1)  # (1, T//2, K, 2)
+    pred_vs = model.vel_extractor.encode(zm1, zm2).expand(-1,-1, zs_v.shape[-2], -1)  # (1, T//2, K, 2)
     
     pred_z3 = model.vel_extractor.decode(pred_vs, z2)
 
