@@ -26,7 +26,8 @@ MODEL_YAML = Path(os.environ.get("MODEL_YAML", "config/model/sa-velocity_clevr.y
 FILES = ["train_checkpoint.pt", "model.pt", "best_model.pt", "train_state.yaml"]
 
 trial = Path(sys.argv[1])
-overrides = OmegaConf.from_dotlist(sys.argv[2:])
+# hydra prefixes: "+key=v" (append) / "++key=v" (force) are plain assignments here; "~key" (delete) is ignored
+overrides = OmegaConf.from_dotlist([a.lstrip("+") for a in sys.argv[2:] if not a.startswith("~")])
 
 # Tunable keys come from the current model yaml, then CLI overrides, never from the shared run.
 model_yaml = OmegaConf.load(MODEL_YAML).model
